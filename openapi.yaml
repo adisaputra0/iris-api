@@ -1,0 +1,388 @@
+openapi: 3.0.3
+info:
+  title: IRIS API Documentation
+  description: Dokumentasi API lengkap untuk sistem Manajemen Produk, Transaksi, dan AI Agent.
+  version: 1.0.0
+
+servers:
+  # - url: https://api.domain.com
+  #   description: Production Server
+  - url: http://localhost:8000
+    description: Local Server
+
+paths:
+  /api/v1/auth/login:
+    post:
+      summary: Login pengguna & generate JWT Token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  example: user@example.com
+                password:
+                  type: string
+                  example: secret123
+      responses:
+        "200":
+          description: Login berhasil, menghasilkan JWT token.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  token:
+                    type: string
+                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+  /api/v1/products:
+    get:
+      summary: Mendapatkan daftar produk (dengan pagination & filter)
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: Nomor halaman
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+          description: Jumlah data per halaman
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Kata kunci pencarian produk
+      responses:
+        "200":
+          description: Berhasil mengambil daftar produk.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          example: 1
+                        sku:
+                          type: string
+                          example: PRD-001
+                        name:
+                          type: string
+                          example: Kopi Susu Aren
+                        price:
+                          type: number
+                          example: 18000
+
+  /api/v1/products/import:
+    post:
+      summary: Import/update massal data Product dari file CSV/Excel (upsert berdasarkan SKU)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: File CSV/Excel yang diunggah
+      responses:
+        "200":
+          description: Import selesai sepenuhnya tanpa error.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  imported_count:
+                    type: integer
+                    example: 50
+        "400":
+          description: Partial errors terjadi saat import.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    type: array
+                    items:
+                      type: string
+                      example: Baris 3 SKU PRD-003 gagal diimport.
+
+  /api/v1/products/{id}:
+    delete:
+      summary: Menonaktifkan (soft delete) produk berdasarkan ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: ID produk
+      responses:
+        "200":
+          description: Produk berhasil dinonaktifkan.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Produk berhasil dinonaktifkan.
+        "404":
+          description: Produk tidak ditemukan.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Produk tidak ditemukan.
+
+  /api/v1/orders:
+    get:
+      summary: Mendapatkan daftar transaksi (read-only)
+      responses:
+        "200":
+          description: Berhasil mengambil data transaksi.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        order_id:
+                          type: string
+                          example: ORD-20260928-001
+                        total_amount:
+                          type: number
+                          example: 54000
+
+  /api/v1/analytics/best-selling:
+    get:
+      summary: Mengambil produk paling laris pada periode tertentu
+      parameters:
+        - in: query
+          name: start_date
+          schema:
+            type: string
+            format: date
+          example: 2026-09-01
+        - in: query
+          name: end_date
+          schema:
+            type: string
+            format: date
+          example: 2026-09-28
+      responses:
+        "200":
+          description: Data produk terlaris berhasil diambil.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        sku:
+                          type: string
+                          example: PRD-001
+                        name:
+                          type: string
+                          example: Kopi Susu Aren
+                        total_sold:
+                          type: integer
+                          example: 120
+
+  /api/v1/analytics/low-margin:
+    get:
+      summary: Mengambil produk dengan margin rendah/negatif
+      responses:
+        "200":
+          description: Data produk margin rendah berhasil diambil.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        sku:
+                          type: string
+                          example: PRD-005
+                        cost_price:
+                          type: number
+                          example: 15000
+                        selling_price:
+                          type: number
+                          example: 14000
+                        margin:
+                          type: number
+                          example: -1000
+
+  /api/v1/analytics/summary:
+    get:
+      summary: Mengambil ringkasan omzet & jumlah transaksi
+      parameters:
+        - in: query
+          name: period
+          schema:
+            type: string
+            enum: [daily, monthly, yearly]
+            default: monthly
+      responses:
+        "200":
+          description: Ringkasan performa penjualan berhasil diambil.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  total_revenue:
+                    type: number
+                    example: 25000000
+                  total_transactions:
+                    type: integer
+                    example: 450
+
+  /api/v1/agent/chat:
+    post:
+      summary: Mengirim pertanyaan ke AI Agent (Gemini function calling)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - message
+              properties:
+                message:
+                  type: string
+                  example: Produk apa yang paling laku bulan ini?
+      responses:
+        "200":
+          description: AI Agent berhasil merespons.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  response:
+                    type: string
+                    example: Produk terlaris bulan ini adalah Kopi Susu Aren dengan total 120 unit terjual.
+        "500":
+          description: Error pada sisi AI Service.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: Gemini API integration failed.
+
+  /api/v1/agent/history:
+    get:
+      summary: Mengambil riwayat percakapan dengan AI Agent
+      responses:
+        "200":
+          description: Riwayat percakapan berhasil diambil.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  history:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        role:
+                          type: string
+                          example: user
+                        content:
+                          type: string
+                          example: Produk apa yang paling laku?
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - bearerAuth: []
