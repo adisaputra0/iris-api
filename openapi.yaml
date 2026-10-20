@@ -1,388 +1,642 @@
 openapi: 3.0.3
 info:
-  title: IRIS API Documentation
-  description: Dokumentasi API lengkap untuk sistem Manajemen Produk, Transaksi, dan AI Agent.
+  title: API POS & Analytics Intelligence System
+  description: |
+    Spesifikasi RESTful API berorientasi dokumen NoSQL (MongoDB) untuk aplikasi Kasir, Manajemen Inventaris, Mutasi Stok, dan AI Chatbot.
   version: 1.0.0
 
 servers:
-  # - url: https://api.domain.com
-  #   description: Production Server
-  - url: http://localhost:8000
-    description: Local Server
+  - url: http://localhost:8000/api
+    description: Development Server (Laravel Local)
 
 paths:
-  /api/v1/auth/login:
+  # ---------------------------------------------------------------------------
+  # USERS ENDPOINTS
+  # ---------------------------------------------------------------------------
+  /users:
+    get:
+      summary: Mendapatkan daftar pengguna
+      tags:
+        - Users
+      parameters:
+        - name: role
+          in: query
+          description: Filter pengguna berdasarkan peran (cashier / admin)
+          required: false
+          schema:
+            type: string
+            enum: [cashier, admin]
+      responses:
+        "200":
+          description: Daftar pengguna berhasil diambil
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+
     post:
-      summary: Login pengguna & generate JWT Token
-      security: []
+      summary: Membuat pengguna baru
+      tags:
+        - Users
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required:
-                - email
-                - password
-              properties:
-                email:
-                  type: string
-                  example: user@example.com
-                password:
-                  type: string
-                  example: secret123
+              $ref: "#/components/schemas/UserCreateInput"
       responses:
-        "200":
-          description: Login berhasil, menghasilkan JWT token.
+        "211":
+          description: Pengguna berhasil dibuat
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  token:
-                    type: string
-                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                $ref: "#/components/schemas/User"
 
-  /api/v1/products:
-    get:
-      summary: Mendapatkan daftar produk (dengan pagination & filter)
-      parameters:
-        - in: query
-          name: page
-          schema:
-            type: integer
-            default: 1
-          description: Nomor halaman
-        - in: query
-          name: limit
-          schema:
-            type: integer
-            default: 10
-          description: Jumlah data per halaman
-        - in: query
-          name: search
-          schema:
-            type: string
-          description: Kata kunci pencarian produk
-      responses:
-        "200":
-          description: Berhasil mengambil daftar produk.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  data:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        id:
-                          type: integer
-                          example: 1
-                        sku:
-                          type: string
-                          example: PRD-001
-                        name:
-                          type: string
-                          example: Kopi Susu Aren
-                        price:
-                          type: number
-                          example: 18000
-
-  /api/v1/products/import:
-    post:
-      summary: Import/update massal data Product dari file CSV/Excel (upsert berdasarkan SKU)
-      requestBody:
+  /users/{id}:
+    parameters:
+      - name: id
+        in: path
         required: true
-        content:
-          multipart/form-data:
-            schema:
-              type: object
-              required:
-                - file
-              properties:
-                file:
-                  type: string
-                  format: binary
-                  description: File CSV/Excel yang diunggah
-      responses:
-        "200":
-          description: Import selesai sepenuhnya tanpa error.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  imported_count:
-                    type: integer
-                    example: 50
-        "400":
-          description: Partial errors terjadi saat import.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: false
-                  errors:
-                    type: array
-                    items:
-                      type: string
-                      example: Baris 3 SKU PRD-003 gagal diimport.
+        description: MongoDB ObjectId dari pengguna
+        schema:
+          type: string
+          example: 65f1a2b3c4d5e6f7a8b9c0d1
 
-  /api/v1/products/{id}:
-    delete:
-      summary: Menonaktifkan (soft delete) produk berdasarkan ID
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-          description: ID produk
+    get:
+      summary: Detail pengguna berdasarkan ID
+      tags:
+        - Users
       responses:
         "200":
-          description: Produk berhasil dinonaktifkan.
+          description: Detail pengguna ditemukan
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                    example: Produk berhasil dinonaktifkan.
+                $ref: "#/components/schemas/User"
         "404":
-          description: Produk tidak ditemukan.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: false
-                  message:
-                    type: string
-                    example: Produk tidak ditemukan.
+          description: Pengguna tidak ditemukan
 
-  /api/v1/orders:
+  # ---------------------------------------------------------------------------
+  # PRODUCTS ENDPOINTS
+  # ---------------------------------------------------------------------------
+  /products:
     get:
-      summary: Mendapatkan daftar transaksi (read-only)
-      responses:
-        "200":
-          description: Berhasil mengambil data transaksi.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  data:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        order_id:
-                          type: string
-                          example: ORD-20260928-001
-                        total_amount:
-                          type: number
-                          example: 54000
-
-  /api/v1/analytics/best-selling:
-    get:
-      summary: Mengambil produk paling laris pada periode tertentu
+      summary: Mendapatkan katalog produk
+      tags:
+        - Products
       parameters:
-        - in: query
-          name: start_date
+        - name: is_active
+          in: query
+          description: Filter status aktif produk
+          required: false
+          schema:
+            type: boolean
+        - name: category
+          in: query
+          description: Filter produk berdasarkan kategori (Multikey Index)
+          required: false
           schema:
             type: string
-            format: date
-          example: 2026-09-01
-        - in: query
-          name: end_date
-          schema:
-            type: string
-            format: date
-          example: 2026-09-28
       responses:
         "200":
-          description: Data produk terlaris berhasil diambil.
+          description: Katalog produk berhasil diambil
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  data:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        sku:
-                          type: string
-                          example: PRD-001
-                        name:
-                          type: string
-                          example: Kopi Susu Aren
-                        total_sold:
-                          type: integer
-                          example: 120
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
 
-  /api/v1/analytics/low-margin:
-    get:
-      summary: Mengambil produk dengan margin rendah/negatif
-      responses:
-        "200":
-          description: Data produk margin rendah berhasil diambil.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  data:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        sku:
-                          type: string
-                          example: PRD-005
-                        cost_price:
-                          type: number
-                          example: 15000
-                        selling_price:
-                          type: number
-                          example: 14000
-                        margin:
-                          type: number
-                          example: -1000
-
-  /api/v1/analytics/summary:
-    get:
-      summary: Mengambil ringkasan omzet & jumlah transaksi
-      parameters:
-        - in: query
-          name: period
-          schema:
-            type: string
-            enum: [daily, monthly, yearly]
-            default: monthly
-      responses:
-        "200":
-          description: Ringkasan performa penjualan berhasil diambil.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  total_revenue:
-                    type: number
-                    example: 25000000
-                  total_transactions:
-                    type: integer
-                    example: 450
-
-  /api/v1/agent/chat:
     post:
-      summary: Mengirim pertanyaan ke AI Agent (Gemini function calling)
+      summary: Menambahkan produk baru
+      tags:
+        - Products
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required:
-                - message
-              properties:
-                message:
-                  type: string
-                  example: Produk apa yang paling laku bulan ini?
+              $ref: "#/components/schemas/ProductInput"
       responses:
-        "200":
-          description: AI Agent berhasil merespons.
+        "201":
+          description: Produk berhasil ditambahkan
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  response:
-                    type: string
-                    example: Produk terlaris bulan ini adalah Kopi Susu Aren dengan total 120 unit terjual.
-        "500":
-          description: Error pada sisi AI Service.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: false
-                  error:
-                    type: string
-                    example: Gemini API integration failed.
+                $ref: "#/components/schemas/Product"
 
-  /api/v1/agent/history:
+  /products/{sku}:
+    parameters:
+      - name: sku
+        in: path
+        required: true
+        description: Stock Keeping Unit (SKU) produk unik
+        schema:
+          type: string
+          example: PRD-00123
+
     get:
-      summary: Mengambil riwayat percakapan dengan AI Agent
+      summary: Detail produk berdasarkan SKU
+      tags:
+        - Products
       responses:
         "200":
-          description: Riwayat percakapan berhasil diambil.
+          description: Produk ditemukan
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  history:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        role:
-                          type: string
-                          example: user
-                        content:
-                          type: string
-                          example: Produk apa yang paling laku?
+                $ref: "#/components/schemas/Product"
+        "404":
+          description: Produk tidak ditemukan
 
+  # ---------------------------------------------------------------------------
+  # ORDERS ENDPOINTS
+  # ---------------------------------------------------------------------------
+  /orders:
+    get:
+      summary: Mendapatkan daftar transaksi penjualan
+      tags:
+        - Orders
+      parameters:
+        - name: start_date
+          in: query
+          description: Tanggal awal rentang transaksi (ISO 8601)
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: end_date
+          in: query
+          description: Tanggal akhir rentang transaksi (ISO 8601)
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: product_sku
+          in: query
+          description: Filter transaksi yang memuat produk tertentu
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Daftar transaksi penjualan berhasil diambil
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Order"
+
+    post:
+      summary: Mencatat transaksi penjualan baru
+      tags:
+        - Orders
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderInput"
+      responses:
+        "201":
+          description: Transaksi berhasil dicatat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  # ---------------------------------------------------------------------------
+  # STOCK MOVEMENTS ENDPOINTS
+  # ---------------------------------------------------------------------------
+  /stock-movements:
+    get:
+      summary: Mendapatkan riwayat mutasi stok
+      tags:
+        - Stock Movements
+      parameters:
+        - name: product_sku
+          in: query
+          description: Filter riwayat mutasi berdasarkan SKU produk
+          required: false
+          schema:
+            type: string
+        - name: type
+          in: query
+          description: Filter berdasarkan tipe mutasi
+          required: false
+          schema:
+            type: string
+            enum: [initial, sale, restock]
+      responses:
+        "200":
+          description: Riwayat mutasi stok berhasil diambil
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StockMovement"
+
+    post:
+      summary: Catat pergerakan stok manual/restock
+      tags:
+        - Stock Movements
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StockMovementInput"
+      responses:
+        "201":
+          description: Mutasi stok berhasil dicatat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockMovement"
+
+  # ---------------------------------------------------------------------------
+  # CHAT HISTORIES ENDPOINTS
+  # ---------------------------------------------------------------------------
+  /chat-histories:
+    get:
+      summary: Mendapatkan riwayat sesi obrolan AI
+      tags:
+        - Chat Histories
+      parameters:
+        - name: session_id
+          in: query
+          description: Filter percakapan berdasarkan Session UUID
+          required: false
+          schema:
+            type: string
+        - name: user_id
+          in: query
+          description: Filter percakapan berdasarkan ID pengguna
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Riwayat percakapan berhasil diambil
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChatHistory"
+
+    post:
+      summary: Kirim prompt/pertanyaan ke AI Agent
+      tags:
+        - Chat Histories
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatHistoryInput"
+      responses:
+        "201":
+          description: Respon AI berhasil dibuat dan disimpan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatHistory"
+
+# =============================================================================
+# COMPONENTS SCHEMAS
+# =============================================================================
 components:
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
+  schemas:
+    # -------------------------------------------------------------------------
+    # USER SCHEMAS
+    # -------------------------------------------------------------------------
+    User:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Primary Key MongoDB ObjectId
+          example: 65f1a2b3c4d5e6f7a8b9c0d1
+        name:
+          type: string
+          example: Budi Santoso
+        email:
+          type: string
+          format: email
+          example: budi.cashier@example.com
+        role:
+          type: string
+          enum: [cashier, admin]
+          example: cashier
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-03-30T08:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2026-03-30T08:00:00Z"
 
-security:
-  - bearerAuth: []
+    UserCreateInput:
+      type: object
+      required:
+        - name
+        - email
+        - password
+        - role
+      properties:
+        name:
+          type: string
+          example: Budi Santoso
+        email:
+          type: string
+          format: email
+          example: budi.cashier@example.com
+        password:
+          type: string
+          format: password
+          example: secret123
+        role:
+          type: string
+          enum: [cashier, admin]
+          example: cashier
+
+    # -------------------------------------------------------------------------
+    # PRODUCT SCHEMAS
+    # -------------------------------------------------------------------------
+    Product:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 65f1a2b3c4d5e6f7a8b9c0d2
+        sku:
+          type: string
+          example: PRD-00123
+        name:
+          type: string
+          example: Kopi Susu Gula Aren 250ml
+        selling_price:
+          type: number
+          format: double
+          example: 18000.0
+        cost_price:
+          type: number
+          format: double
+          nullable: true
+          example: 10000.0
+        categories:
+          type: array
+          items:
+            type: string
+          example: ["Minuman", "Kopi", "Ready to Drink"]
+        stock:
+          type: integer
+          example: 45
+        min_stock:
+          type: integer
+          example: 10
+        source:
+          type: string
+          enum: [synced, manual]
+          example: manual
+        is_active:
+          type: boolean
+          default: true
+          example: true
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-03-30T08:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2026-03-30T08:00:00Z"
+
+    ProductInput:
+      type: object
+      required:
+        - sku
+        - name
+        - selling_price
+        - categories
+        - stock
+        - min_stock
+        - source
+      properties:
+        sku:
+          type: string
+          example: PRD-00123
+        name:
+          type: string
+          example: Kopi Susu Gula Aren 250ml
+        selling_price:
+          type: number
+          format: double
+          example: 18000.0
+        cost_price:
+          type: number
+          format: double
+          nullable: true
+          example: 10000.0
+        categories:
+          type: array
+          items:
+            type: string
+          example: ["Minuman", "Kopi", "Ready to Drink"]
+        stock:
+          type: integer
+          example: 45
+        min_stock:
+          type: integer
+          example: 10
+        source:
+          type: string
+          enum: [synced, manual]
+          example: manual
+        is_active:
+          type: boolean
+          default: true
+          example: true
+
+    # -------------------------------------------------------------------------
+    # ORDER SCHEMAS
+    # -------------------------------------------------------------------------
+    OrderItem:
+      type: object
+      required:
+        - product_sku
+        - qty
+        - price_at_sale
+      properties:
+        product_sku:
+          type: string
+          example: PRD-00123
+        qty:
+          type: integer
+          example: 2
+        price_at_sale:
+          type: number
+          format: double
+          example: 18000.0
+
+    Order:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 65f1a2b3c4d5e6f7a8b9c0d3
+        transaction_id:
+          type: string
+          example: TRX-20260330-001
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+        total:
+          type: number
+          format: double
+          example: 51000.0
+        transaction_time:
+          type: string
+          format: date-time
+          example: "2026-03-30T10:15:00Z"
+        synced_at:
+          type: string
+          format: date-time
+          example: "2026-03-30T10:15:05Z"
+
+    OrderInput:
+      type: object
+      required:
+        - transaction_id
+        - items
+        - total
+        - transaction_time
+        - synced_at
+      properties:
+        transaction_id:
+          type: string
+          example: TRX-20260330-001
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrderItem"
+        total:
+          type: number
+          format: double
+          example: 51000.0
+        transaction_time:
+          type: string
+          format: date-time
+          example: "2026-03-30T10:15:00Z"
+        synced_at:
+          type: string
+          format: date-time
+          example: "2026-03-30T10:15:05Z"
+
+    # -------------------------------------------------------------------------
+    # STOCK MOVEMENT SCHEMAS
+    # -------------------------------------------------------------------------
+    StockMovement:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 65f1a2b3c4d5e6f7a8b9c0d4
+        product_sku:
+          type: string
+          example: PRD-00123
+        type:
+          type: string
+          enum: [initial, sale, restock]
+          example: sale
+        qty:
+          type: integer
+          example: -2
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-03-30T10:15:00Z"
+
+    StockMovementInput:
+      type: object
+      required:
+        - product_sku
+        - type
+        - qty
+      properties:
+        product_sku:
+          type: string
+          example: PRD-00123
+        type:
+          type: string
+          enum: [initial, sale, restock]
+          example: restock
+        qty:
+          type: integer
+          example: 50
+
+    # -------------------------------------------------------------------------
+    # CHAT HISTORY SCHEMAS
+    # -------------------------------------------------------------------------
+    FunctionCall:
+      type: object
+      nullable: true
+      properties:
+        name:
+          type: string
+          example: check_product_stock
+        arguments:
+          type: object
+          additionalProperties: true
+          example:
+            sku: PRD-00123
+
+    ChatHistory:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 65f1a2b3c4d5e6f7a8b9c0d5
+        user_id:
+          type: string
+          description: MongoDB ObjectId dari koleksi users
+          example: 65f1a2b3c4d5e6f7a8b9c0d1
+        session_id:
+          type: string
+          example: sess-88a9-41bc-b219
+        question:
+          type: string
+          example: Cek sisa stok Kopi Susu Gula Aren
+        answer:
+          type: string
+          example: Stok untuk Kopi Susu Gula Aren (PRD-00123) saat ini tersisa 45 unit.
+        function_call:
+          $ref: "#/components/schemas/FunctionCall"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-03-30T11:00:00Z"
+
+    ChatHistoryInput:
+      type: object
+      required:
+        - user_id
+        - session_id
+        - question
+      properties:
+        user_id:
+          type: string
+          example: 65f1a2b3c4d5e6f7a8b9c0d1
+        session_id:
+          type: string
+          example: sess-88a9-41bc-b219
+        question:
+          type: string
+          example: Cek sisa stok Kopi Susu Gula Aren
