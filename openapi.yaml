@@ -1,642 +1,2445 @@
-openapi: 3.0.3
+openapi: 3.0.0
+
 info:
-  title: API POS & Analytics Intelligence System
-  description: |
-    Spesifikasi RESTful API berorientasi dokumen NoSQL (MongoDB) untuk aplikasi Kasir, Manajemen Inventaris, Mutasi Stok, dan AI Chatbot.
+  title: Sales Analytics & POS API Specification
   version: 1.0.0
+  description: |
+    Spesifikasi RESTful API untuk aplikasi Sales Analytics dan Point of Sale (POS)
+    berbasis MongoDB. API menyediakan autentikasi owner dan kasir, pengelolaan produk,
+    transaksi POS, riwayat pesanan, analitik penjualan, serta AI Agent untuk membantu
+    owner menganalisis data penjualan.
+
+    Autentikasi menggunakan JSON Web Token (JWT). Kirimkan token pada header
+    `Authorization` dengan format `Bearer <token>`.
+
+    Endpoint login tidak memerlukan token. Seluruh endpoint lain memerlukan token
+    yang valid dan sesuai peran (owner atau kasir).
+
+tags:
+  - name: Auth
+    description: Autentikasi owner dan kasir.
+  - name: Products
+    description: Pengelolaan katalog produk.
+  - name: POS Orders
+    description: Transaksi dan riwayat pesanan kasir.
+  - name: Owner Orders
+    description: Riwayat seluruh pesanan untuk owner.
+  - name: Analytics
+    description: Analitik penjualan dan laporan bisnis.
+  - name: AI Agent
+    description: Asisten AI untuk analisis penjualan berbasis percakapan.
 
 servers:
-  - url: http://localhost:8000/api
-    description: Development Server (Laravel Local)
+  - url: http://localhost:5000
+    description: Local development server
+  - url: http://127.0.0.1:5000
+    description: Local development server alternatif
+
+security:
+  - BearerAuth: []
 
 paths:
-  # ---------------------------------------------------------------------------
-  # USERS ENDPOINTS
-  # ---------------------------------------------------------------------------
-  /users:
-    get:
-      summary: Mendapatkan daftar pengguna
-      tags:
-        - Users
-      parameters:
-        - name: role
-          in: query
-          description: Filter pengguna berdasarkan peran (cashier / admin)
-          required: false
-          schema:
-            type: string
-            enum: [cashier, admin]
-      responses:
-        "200":
-          description: Daftar pengguna berhasil diambil
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/User"
-
+  /api/v1/auth/login:
     post:
-      summary: Membuat pengguna baru
       tags:
-        - Users
+        - Auth
+      operationId: loginOwner
+      summary: Login owner
+      description: |
+        Melakukan autentikasi owner menggunakan email dan password.
+        Endpoint ini tidak memerlukan Bearer Token.
+      security: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UserCreateInput"
+              $ref: '#/components/schemas/LoginOwnerRequest'
+            examples:
+              owner:
+                summary: Contoh login owner
+                value:
+                  email: "owner@tokokopi.id"
+                  password: "rahasia123"
       responses:
-        "211":
-          description: Pengguna berhasil dibuat
+        '200':
+          description: Login owner berhasil.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/User"
+                $ref: '#/components/schemas/LoginOwnerResponse'
+              examples:
+                success:
+                  summary: Login berhasil
+                  value:
+                    token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NjVmMWEyYjNjNGQ1ZTZmN2E4YjljMGQiLCJyb2xlIjoib3duZXIiLCJpYXQiOjE3NjE1NTQ5MzAsImV4cCI6MTc2MTY0MTMzMH0.dGVzdC1zaWduYXR1cmUtZHVtbXk"
+                    token_type: "Bearer"
+                    expires_in: 86400
+                    user:
+                      _id: "665f1a2b3c4d5e6f7a8b9c0d"
+                      name: "Budi Santoso"
+                      email: "owner@tokokopi.id"
+                      createdAt: "2026-01-15T08:30:00.000Z"
+                      updatedAt: "2026-10-20T09:12:45.000Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
-  /users/{id}:
-    parameters:
-      - name: id
-        in: path
-        required: true
-        description: MongoDB ObjectId dari pengguna
-        schema:
-          type: string
-          example: 65f1a2b3c4d5e6f7a8b9c0d1
-
-    get:
-      summary: Detail pengguna berdasarkan ID
+  /api/v1/pos/auth/login:
+    post:
       tags:
-        - Users
+        - Auth
+      operationId: loginCashier
+      summary: Login kasir
+      description: |
+        Melakukan autentikasi kasir menggunakan username dan password.
+        Endpoint ini tidak memerlukan Bearer Token.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginCashierRequest'
+            examples:
+              cashier:
+                summary: Contoh login kasir
+                value:
+                  username: "kasir_siti"
+                  password: "kasir123"
       responses:
-        "200":
-          description: Detail pengguna ditemukan
+        '200':
+          description: Login kasir berhasil.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/User"
-        "404":
-          description: Pengguna tidak ditemukan
+                $ref: '#/components/schemas/LoginCashierResponse'
+              examples:
+                success:
+                  summary: Login kasir berhasil
+                  value:
+                    token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NjVmMWEyYjNjNGQ1ZTZmN2E4YjljMWUiLCJyb2xlIjoia2FzaXIiLCJpYXQiOjE3NjE1NTQ5MzAsImV4cCI6MTc2MTY0MTMzMH0.a2FzaXItdGVzdC1zaWduYXR1cmU"
+                    token_type: "Bearer"
+                    expires_in: 28800
+                    cashier:
+                      _id: "665f1a2b3c4d5e6f7a8b9c1e"
+                      name: "Siti Aminah"
+                      username: "kasir_siti"
+                      is_active: true
+                      createdAt: "2026-02-01T07:00:00.000Z"
+                      updatedAt: "2026-10-25T06:45:00.000Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
-  # ---------------------------------------------------------------------------
-  # PRODUCTS ENDPOINTS
-  # ---------------------------------------------------------------------------
-  /products:
+  /api/v1/products:
     get:
-      summary: Mendapatkan katalog produk
       tags:
         - Products
+      operationId: listProducts
+      summary: Ambil daftar produk
+      description: |
+        Mengambil daftar produk dengan dukungan pagination, pencarian berdasarkan nama
+        atau kode produk, dan filter kategori. Dapat diakses oleh owner dan kasir.
       parameters:
-        - name: is_active
-          in: query
-          description: Filter status aktif produk
-          required: false
-          schema:
-            type: boolean
-        - name: category
-          in: query
-          description: Filter produk berdasarkan kategori (Multikey Index)
-          required: false
-          schema:
-            type: string
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SearchParam'
+        - $ref: '#/components/parameters/CategoryParam'
       responses:
-        "200":
-          description: Katalog produk berhasil diambil
+        '200':
+          description: Daftar produk berhasil diambil.
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Product"
+                $ref: '#/components/schemas/ProductListResponse'
+              examples:
+                success:
+                  summary: Daftar produk dengan pagination
+                  value:
+                    data:
+                      - _id: "665f1a2b3c4d5e6f7a8b9c10"
+                        product_code: "KPI-001"
+                        name: "Kopi Susu Gula Aren"
+                        category: "Kopi"
+                        selling_price: 22000
+                        cost_price: 12000
+                        is_active: true
+                        createdAt: "2026-03-01T08:00:00.000Z"
+                        updatedAt: "2026-10-01T10:30:00.000Z"
+                      - _id: "665f1a2b3c4d5e6f7a8b9c11"
+                        product_code: "KPI-002"
+                        name: "Es Teh Manis"
+                        category: "Minuman"
+                        selling_price: 8000
+                        cost_price: 2500
+                        is_active: true
+                        createdAt: "2026-03-01T08:05:00.000Z"
+                        updatedAt: "2026-09-15T11:20:00.000Z"
+                      - _id: "665f1a2b3c4d5e6f7a8b9c12"
+                        product_code: "KPI-003"
+                        name: "Croissant Butter"
+                        category: "Snack"
+                        selling_price: 18000
+                        cost_price: 9000
+                        is_active: true
+                        createdAt: "2026-03-02T09:10:00.000Z"
+                        updatedAt: "2026-08-21T14:00:00.000Z"
+                      - _id: "665f1a2b3c4d5e6f7a8b9c13"
+                        product_code: "KPI-004"
+                        name: "Brownies Fudge"
+                        category: "Dessert"
+                        selling_price: 25000
+                        cost_price: null
+                        is_active: false
+                        createdAt: "2026-03-05T10:00:00.000Z"
+                        updatedAt: "2026-10-10T16:45:00.000Z"
+                    pagination:
+                      page: 1
+                      limit: 10
+                      total_items: 24
+                      total_pages: 3
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
     post:
-      summary: Menambahkan produk baru
       tags:
         - Products
+      operationId: createProduct
+      summary: Tambah produk baru
+      description: |
+        Menambahkan produk baru. Hanya dapat diakses oleh owner.
+        Nilai `product_code` dibuat otomatis oleh server dengan format `KPI-XXX`.
+      parameters: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ProductInput"
+              $ref: '#/components/schemas/ProductCreateRequest'
+            examples:
+              newProduct:
+                summary: Contoh produk baru
+                value:
+                  name: "Matcha Latte"
+                  category: "Minuman"
+                  selling_price: 24000
+                  cost_price: 13500
       responses:
-        "201":
-          description: Produk berhasil ditambahkan
+        '201':
+          description: Produk berhasil dibuat.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Product"
+                $ref: '#/components/schemas/ProductResponse'
+              examples:
+                created:
+                  summary: Produk berhasil dibuat
+                  value:
+                    message: "Produk berhasil dibuat"
+                    data:
+                      _id: "665f1a2b3c4d5e6f7a8b9c14"
+                      product_code: "KPI-005"
+                      name: "Matcha Latte"
+                      category: "Minuman"
+                      selling_price: 24000
+                      cost_price: 13500
+                      is_active: true
+                      createdAt: "2026-10-27T03:15:00.000Z"
+                      updatedAt: "2026-10-27T03:15:00.000Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
 
-  /products/{sku}:
-    parameters:
-      - name: sku
-        in: path
-        required: true
-        description: Stock Keeping Unit (SKU) produk unik
-        schema:
-          type: string
-          example: PRD-00123
-
-    get:
-      summary: Detail produk berdasarkan SKU
+  /api/v1/products/{id}:
+    put:
       tags:
         - Products
-      responses:
-        "200":
-          description: Produk ditemukan
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Product"
-        "404":
-          description: Produk tidak ditemukan
-
-  # ---------------------------------------------------------------------------
-  # ORDERS ENDPOINTS
-  # ---------------------------------------------------------------------------
-  /orders:
-    get:
-      summary: Mendapatkan daftar transaksi penjualan
-      tags:
-        - Orders
+      operationId: updateProduct
+      summary: Perbarui produk
+      description: |
+        Memperbarui data produk berdasarkan ID. Hanya dapat diakses oleh owner.
+        Seluruh field bersifat opsional, tetapi minimal satu field harus dikirim.
       parameters:
-        - name: start_date
-          in: query
-          description: Tanggal awal rentang transaksi (ISO 8601)
-          required: false
-          schema:
-            type: string
-            format: date-time
-        - name: end_date
-          in: query
-          description: Tanggal akhir rentang transaksi (ISO 8601)
-          required: false
-          schema:
-            type: string
-            format: date-time
-        - name: product_sku
-          in: query
-          description: Filter transaksi yang memuat produk tertentu
-          required: false
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Daftar transaksi penjualan berhasil diambil
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Order"
-
-    post:
-      summary: Mencatat transaksi penjualan baru
-      tags:
-        - Orders
+        - $ref: '#/components/parameters/ProductIdPathParam'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/OrderInput"
+              $ref: '#/components/schemas/ProductUpdateRequest'
+            examples:
+              updatePrice:
+                summary: Contoh memperbarui harga
+                value:
+                  selling_price: 25000
+                  cost_price: 13500
+              deactivate:
+                summary: Contoh menonaktifkan produk
+                value:
+                  is_active: false
       responses:
-        "201":
-          description: Transaksi berhasil dicatat
+        '200':
+          description: Produk berhasil diperbarui.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Order"
+                $ref: '#/components/schemas/ProductResponse'
+              examples:
+                updated:
+                  summary: Produk berhasil diperbarui
+                  value:
+                    message: "Produk berhasil diperbarui"
+                    data:
+                      _id: "665f1a2b3c4d5e6f7a8b9c14"
+                      product_code: "KPI-005"
+                      name: "Matcha Latte"
+                      category: "Minuman"
+                      selling_price: 25000
+                      cost_price: 13500
+                      is_active: true
+                      createdAt: "2026-10-27T03:15:00.000Z"
+                      updatedAt: "2026-10-27T04:20:00.000Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
 
-  # ---------------------------------------------------------------------------
-  # STOCK MOVEMENTS ENDPOINTS
-  # ---------------------------------------------------------------------------
-  /stock-movements:
-    get:
-      summary: Mendapatkan riwayat mutasi stok
+    delete:
       tags:
-        - Stock Movements
+        - Products
+      operationId: deleteProduct
+      summary: Nonaktifkan produk
+      description: |
+        Melakukan soft delete dengan mengubah `is_active` menjadi `false`.
+        Hanya dapat diakses oleh owner.
       parameters:
-        - name: product_sku
-          in: query
-          description: Filter riwayat mutasi berdasarkan SKU produk
-          required: false
-          schema:
-            type: string
-        - name: type
-          in: query
-          description: Filter berdasarkan tipe mutasi
-          required: false
-          schema:
-            type: string
-            enum: [initial, sale, restock]
+        - $ref: '#/components/parameters/ProductIdPathParam'
       responses:
-        "200":
-          description: Riwayat mutasi stok berhasil diambil
+        '200':
+          description: Produk berhasil dinonaktifkan.
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/StockMovement"
+                $ref: '#/components/schemas/ProductResponse'
+              examples:
+                deactivated:
+                  summary: Produk berhasil dinonaktifkan
+                  value:
+                    message: "Produk berhasil dinonaktifkan"
+                    data:
+                      _id: "665f1a2b3c4d5e6f7a8b9c14"
+                      product_code: "KPI-005"
+                      name: "Matcha Latte"
+                      category: "Minuman"
+                      selling_price: 25000
+                      cost_price: 13500
+                      is_active: false
+                      createdAt: "2026-10-27T03:15:00.000Z"
+                      updatedAt: "2026-10-27T05:05:00.000Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
+  /api/v1/pos/orders:
     post:
-      summary: Catat pergerakan stok manual/restock
       tags:
-        - Stock Movements
+        - POS Orders
+      operationId: createPosOrder
+      summary: Buat transaksi POS
+      description: |
+        Membuat transaksi baru dari POS. Hanya dapat diakses oleh kasir.
+        Harga, biaya, dan nama produk diambil langsung dari database pada sisi server,
+        sehingga harga tidak dapat dimanipulasi dari request.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/StockMovementInput"
+              $ref: '#/components/schemas/CreateOrderRequest'
+            examples:
+              qrisOrder:
+                summary: Contoh transaksi dengan QRIS
+                value:
+                  items:
+                    - product_id: "665f1a2b3c4d5e6f7a8b9c10"
+                      qty: 2
+                    - product_id: "665f1a2b3c4d5e6f7a8b9c12"
+                      qty: 1
+                  payment_method: "qris"
+              cashOrder:
+                summary: Contoh transaksi tunai
+                value:
+                  items:
+                    - product_id: "665f1a2b3c4d5e6f7a8b9c11"
+                      qty: 3
+                  payment_method: "tunai"
       responses:
-        "201":
-          description: Mutasi stok berhasil dicatat
+        '201':
+          description: Transaksi POS berhasil dibuat.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/StockMovement"
+                $ref: '#/components/schemas/OrderResponse'
+              examples:
+                created:
+                  summary: Transaksi berhasil dibuat
+                  value:
+                    message: "Transaksi berhasil dibuat"
+                    data:
+                      _id: "66f0a1b2c3d4e5f6a7b8c9d0"
+                      transaction_id: "TRX-20261027-0001"
+                      source: "pos"
+                      cashier_id: "665f1a2b3c4d5e6f7a8b9c1e"
+                      items:
+                        - product_id: "665f1a2b3c4d5e6f7a8b9c10"
+                          product_name: "Kopi Susu Gula Aren"
+                          category: "Kopi"
+                          qty: 2
+                          price_at_sale: 22000
+                          cost_at_sale: 12000
+                        - product_id: "665f1a2b3c4d5e6f7a8b9c12"
+                          product_name: "Croissant Butter"
+                          category: "Snack"
+                          qty: 1
+                          price_at_sale: 18000
+                          cost_at_sale: 9000
+                      total: 62000
+                      payment_method: "qris"
+                      transaction_time: "2026-10-27T10:15:30.000Z"
+                      createdAt: "2026-10-27T10:15:30.000Z"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
 
-  # ---------------------------------------------------------------------------
-  # CHAT HISTORIES ENDPOINTS
-  # ---------------------------------------------------------------------------
-  /chat-histories:
+  /api/v1/pos/orders/today:
     get:
-      summary: Mendapatkan riwayat sesi obrolan AI
       tags:
-        - Chat Histories
-      parameters:
-        - name: session_id
-          in: query
-          description: Filter percakapan berdasarkan Session UUID
-          required: false
-          schema:
-            type: string
-        - name: user_id
-          in: query
-          description: Filter percakapan berdasarkan ID pengguna
-          required: false
-          schema:
-            type: string
+        - POS Orders
+      operationId: listTodayPosOrders
+      summary: Riwayat transaksi hari ini
+      description: |
+        Mengambil seluruh transaksi POS pada hari ini. Endpoint bersifat read-only
+        dan hanya dapat diakses oleh kasir.
       responses:
-        "200":
-          description: Riwayat percakapan berhasil diambil
+        '200':
+          description: Riwayat transaksi hari ini berhasil diambil.
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/ChatHistory"
+                $ref: '#/components/schemas/TodayOrdersResponse'
+              examples:
+                success:
+                  summary: Transaksi hari ini
+                  value:
+                    date: "2026-10-27"
+                    total_transactions: 12
+                    total_omzet: 1875000
+                    data:
+                      - _id: "66f0a1b2c3d4e5f6a7b8c9d0"
+                        transaction_id: "TRX-20261027-0001"
+                        source: "pos"
+                        cashier_id: "665f1a2b3c4d5e6f7a8b9c1e"
+                        items:
+                          - product_id: "665f1a2b3c4d5e6f7a8b9c10"
+                            product_name: "Kopi Susu Gula Aren"
+                            category: "Kopi"
+                            qty: 2
+                            price_at_sale: 22000
+                            cost_at_sale: 12000
+                          - product_id: "665f1a2b3c4d5e6f7a8b9c12"
+                            product_name: "Croissant Butter"
+                            category: "Snack"
+                            qty: 1
+                            price_at_sale: 18000
+                            cost_at_sale: 9000
+                        total: 62000
+                        payment_method: "qris"
+                        transaction_time: "2026-10-27T10:15:30.000Z"
+                        createdAt: "2026-10-27T10:15:30.000Z"
+                      - _id: "66f0a1b2c3d4e5f6a7b8c9d1"
+                        transaction_id: "TRX-20261027-0002"
+                        source: "pos"
+                        cashier_id: "665f1a2b3c4d5e6f7a8b9c1e"
+                        items:
+                          - product_id: "665f1a2b3c4d5e6f7a8b9c11"
+                            product_name: "Es Teh Manis"
+                            category: "Minuman"
+                            qty: 3
+                            price_at_sale: 8000
+                            cost_at_sale: 2500
+                        total: 24000
+                        payment_method: "tunai"
+                        transaction_time: "2026-10-27T10:42:11.000Z"
+                        createdAt: "2026-10-27T10:42:11.000Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
-    post:
-      summary: Kirim prompt/pertanyaan ke AI Agent
+  /api/v1/orders:
+    get:
       tags:
-        - Chat Histories
+        - Owner Orders
+      operationId: listOwnerOrders
+      summary: Ambil seluruh riwayat pesanan
+      description: |
+        Mengambil riwayat seluruh pesanan dengan filter rentang tanggal dan pagination.
+        Hanya dapat diakses oleh owner.
+      parameters:
+        - $ref: '#/components/parameters/StartDateParam'
+        - $ref: '#/components/parameters/EndDateParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Riwayat pesanan berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderListResponse'
+              examples:
+                success:
+                  summary: Riwayat pesanan dengan pagination
+                  value:
+                    data:
+                      - _id: "66f0a1b2c3d4e5f6a7b8c9d0"
+                        transaction_id: "TRX-20261027-0001"
+                        source: "pos"
+                        cashier_id: "665f1a2b3c4d5e6f7a8b9c1e"
+                        items:
+                          - product_id: "665f1a2b3c4d5e6f7a8b9c10"
+                            product_name: "Kopi Susu Gula Aren"
+                            category: "Kopi"
+                            qty: 2
+                            price_at_sale: 22000
+                            cost_at_sale: 12000
+                          - product_id: "665f1a2b3c4d5e6f7a8b9c12"
+                            product_name: "Croissant Butter"
+                            category: "Snack"
+                            qty: 1
+                            price_at_sale: 18000
+                            cost_at_sale: 9000
+                        total: 62000
+                        payment_method: "qris"
+                        transaction_time: "2026-10-27T10:15:30.000Z"
+                        createdAt: "2026-10-27T10:15:30.000Z"
+                      - _id: "66f0a1b2c3d4e5f6a7b8c9d2"
+                        transaction_id: "TRX-GEN-20261026-0087"
+                        source: "generator"
+                        cashier_id: null
+                        items:
+                          - product_id: "665f1a2b3c4d5e6f7a8b9c10"
+                            product_name: "Kopi Susu Gula Aren"
+                            category: "Kopi"
+                            qty: 1
+                            price_at_sale: 22000
+                            cost_at_sale: 12000
+                        total: 22000
+                        payment_method: "transfer"
+                        transaction_time: "2026-10-26T15:20:00.000Z"
+                        createdAt: "2026-10-26T15:20:00.000Z"
+                    pagination:
+                      page: 1
+                      limit: 10
+                      total_items: 342
+                      total_pages: 35
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/analytics/summary:
+    get:
+      tags:
+        - Analytics
+      operationId: getAnalyticsSummary
+      summary: Ringkasan penjualan
+      description: |
+        Mengambil ringkasan total omzet dan jumlah transaksi pada rentang tanggal.
+        Hanya dapat diakses oleh owner.
+      parameters:
+        - $ref: '#/components/parameters/StartDateParam'
+        - $ref: '#/components/parameters/EndDateParam'
+      responses:
+        '200':
+          description: Ringkasan penjualan berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsSummaryResponse'
+              examples:
+                success:
+                  summary: Ringkasan penjualan
+                  value:
+                    start_date: "2026-10-01"
+                    end_date: "2026-10-27"
+                    total_omzet: 18750000
+                    total_transactions: 342
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/analytics/best-selling:
+    get:
+      tags:
+        - Analytics
+      operationId: getBestSellingProducts
+      summary: Produk terlaris
+      description: |
+        Mengambil daftar produk terlaris berdasarkan jumlah terjual dan pendapatan
+        pada rentang tanggal. Hanya dapat diakses oleh owner.
+      parameters:
+        - $ref: '#/components/parameters/StartDateParam'
+        - $ref: '#/components/parameters/EndDateParam'
+        - $ref: '#/components/parameters/TopLimitParam'
+      responses:
+        '200':
+          description: Daftar produk terlaris berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BestSellingResponse'
+              examples:
+                success:
+                  summary: Lima produk terlaris
+                  value:
+                    start_date: "2026-10-01"
+                    end_date: "2026-10-27"
+                    limit: 5
+                    data:
+                      - product_id: "665f1a2b3c4d5e6f7a8b9c10"
+                        product_code: "KPI-001"
+                        product_name: "Kopi Susu Gula Aren"
+                        category: "Kopi"
+                        total_qty: 420
+                        total_revenue: 9240000
+                      - product_id: "665f1a2b3c4d5e6f7a8b9c11"
+                        product_code: "KPI-002"
+                        product_name: "Es Teh Manis"
+                        category: "Minuman"
+                        total_qty: 310
+                        total_revenue: 2480000
+                      - product_id: "665f1a2b3c4d5e6f7a8b9c12"
+                        product_code: "KPI-003"
+                        product_name: "Croissant Butter"
+                        category: "Snack"
+                        total_qty: 90
+                        total_revenue: 1620000
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/analytics/low-margin:
+    get:
+      tags:
+        - Analytics
+      operationId: getLowMarginProducts
+      summary: Produk dengan margin rendah
+      description: |
+        Mengambil daftar produk dengan margin rendah atau negatif. Perhitungan hanya
+        menggunakan item yang memiliki nilai `cost_at_sale` terisi. Hanya dapat
+        diakses oleh owner.
+      parameters:
+        - $ref: '#/components/parameters/StartDateParam'
+        - $ref: '#/components/parameters/EndDateParam'
+        - $ref: '#/components/parameters/ThresholdParam'
+      responses:
+        '200':
+          description: Daftar produk bermargin rendah berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LowMarginResponse'
+              examples:
+                success:
+                  summary: Produk dengan margin di bawah threshold
+                  value:
+                    start_date: "2026-10-01"
+                    end_date: "2026-10-27"
+                    threshold: 0.15
+                    data:
+                      - product_id: "665f1a2b3c4d5e6f7a8b9c20"
+                        product_code: "KPI-011"
+                        product_name: "Americano Dingin"
+                        category: "Kopi"
+                        avg_selling_price: 12000
+                        avg_cost_price: 11000
+                        margin_per_unit: 1000
+                        margin_percentage: 8.33
+                        total_qty: 45
+                        total_revenue: 540000
+                        total_profit: 45000
+                      - product_id: "665f1a2b3c4d5e6f7a8b9c21"
+                        product_code: "KPI-012"
+                        product_name: "Roti Bakar Keju"
+                        category: "Makanan"
+                        avg_selling_price: 15000
+                        avg_cost_price: 15500
+                        margin_per_unit: -500
+                        margin_percentage: -3.33
+                        total_qty: 12
+                        total_revenue: 180000
+                        total_profit: -6000
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/analytics/sales-by-category:
+    get:
+      tags:
+        - Analytics
+      operationId: getSalesByCategory
+      summary: Penjualan per kategori
+      description: |
+        Mengambil total pendapatan dan jumlah terjual untuk setiap kategori produk
+        pada rentang tanggal. Hanya dapat diakses oleh owner.
+      parameters:
+        - $ref: '#/components/parameters/StartDateParam'
+        - $ref: '#/components/parameters/EndDateParam'
+      responses:
+        '200':
+          description: Penjualan per kategori berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalesByCategoryResponse'
+              examples:
+                success:
+                  summary: Pendapatan dan kuantitas per kategori
+                  value:
+                    start_date: "2026-10-01"
+                    end_date: "2026-10-27"
+                    data:
+                      - category: "Kopi"
+                        total_qty: 420
+                        total_revenue: 8400000
+                      - category: "Minuman"
+                        total_qty: 310
+                        total_revenue: 2170000
+                      - category: "Makanan"
+                        total_qty: 120
+                        total_revenue: 4320000
+                      - category: "Snack"
+                        total_qty: 90
+                        total_revenue: 1560000
+                      - category: "Dessert"
+                        total_qty: 46
+                        total_revenue: 2300000
+                    totals:
+                      total_qty: 986
+                      total_revenue: 18750000
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/analytics/trend:
+    get:
+      tags:
+        - Analytics
+      operationId: getSalesTrend
+      summary: Tren penjualan
+      description: |
+        Mengambil data deret waktu penjualan berdasarkan interval harian, mingguan,
+        atau bulanan. Dapat difilter berdasarkan produk atau kategori. Hanya dapat
+        diakses oleh owner.
+      parameters:
+        - $ref: '#/components/parameters/StartDateParam'
+        - $ref: '#/components/parameters/EndDateParam'
+        - $ref: '#/components/parameters/IntervalParam'
+        - $ref: '#/components/parameters/ProductIdQueryParam'
+        - $ref: '#/components/parameters/CategoryParam'
+      responses:
+        '200':
+          description: Data tren penjualan berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrendResponse'
+              examples:
+                success:
+                  summary: Tren penjualan mingguan kategori Kopi
+                  value:
+                    start_date: "2026-09-29"
+                    end_date: "2026-10-27"
+                    interval: "weekly"
+                    filters:
+                      product_id: null
+                      category: "Kopi"
+                    data:
+                      - period: "2026-W40"
+                        total_qty: 120
+                        total_revenue: 2640000
+                        total_transactions: 98
+                      - period: "2026-W41"
+                        total_qty: 135
+                        total_revenue: 2970000
+                        total_transactions: 110
+                      - period: "2026-W42"
+                        total_qty: 128
+                        total_revenue: 2816000
+                        total_transactions: 104
+                      - period: "2026-W43"
+                        total_qty: 149
+                        total_revenue: 3278000
+                        total_transactions: 118
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/analytics/peak-hours:
+    get:
+      tags:
+        - Analytics
+      operationId: getPeakHours
+      summary: Distribusi transaksi per jam
+      description: |
+        Mengambil distribusi jumlah transaksi dan omzet untuk setiap jam dalam
+        rentang tanggal, mulai dari jam 00 sampai 23. Hanya dapat diakses oleh owner.
+      parameters:
+        - $ref: '#/components/parameters/StartDateParam'
+        - $ref: '#/components/parameters/EndDateParam'
+      responses:
+        '200':
+          description: Distribusi transaksi per jam berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PeakHoursResponse'
+              examples:
+                success:
+                  summary: Distribusi transaksi per jam
+                  value:
+                    start_date: "2026-10-01"
+                    end_date: "2026-10-27"
+                    data:
+                      - hour: "07"
+                        total_transactions: 18
+                        total_omzet: 396000
+                      - hour: "08"
+                        total_transactions: 24
+                        total_omzet: 528000
+                      - hour: "11"
+                        total_transactions: 19
+                        total_omzet: 418000
+                      - hour: "12"
+                        total_transactions: 31
+                        total_omzet: 682000
+                      - hour: "13"
+                        total_transactions: 27
+                        total_omzet: 594000
+                      - hour: "18"
+                        total_transactions: 35
+                        total_omzet: 770000
+                      - hour: "19"
+                        total_transactions: 42
+                        total_omzet: 924000
+                      - hour: "20"
+                        total_transactions: 29
+                        total_omzet: 638000
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/analytics/compare:
+    get:
+      tags:
+        - Analytics
+      operationId: comparePeriods
+      summary: Bandingkan dua periode
+      description: |
+        Membandingkan metrik penjualan antara dua periode dan menghitung persentase
+        perubahan omzet, transaksi, dan kuantitas. Hanya dapat diakses oleh owner.
+      parameters:
+        - name: period1_start
+          in: query
+          required: true
+          description: Tanggal awal periode pertama.
+          schema:
+            type: string
+            format: date
+            example: "2026-09-01"
+        - name: period1_end
+          in: query
+          required: true
+          description: Tanggal akhir periode pertama.
+          schema:
+            type: string
+            format: date
+            example: "2026-09-30"
+        - name: period2_start
+          in: query
+          required: true
+          description: Tanggal awal periode kedua.
+          schema:
+            type: string
+            format: date
+            example: "2026-10-01"
+        - name: period2_end
+          in: query
+          required: true
+          description: Tanggal akhir periode kedua.
+          schema:
+            type: string
+            format: date
+            example: "2026-10-27"
+      responses:
+        '200':
+          description: Perbandingan periode berhasil dihitung.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompareResponse'
+              examples:
+                success:
+                  summary: Perbandingan September dan Oktober
+                  value:
+                    period1:
+                      start_date: "2026-09-01"
+                      end_date: "2026-09-30"
+                      total_omzet: 15200000
+                      total_transactions: 280
+                      total_qty: 810
+                    period2:
+                      start_date: "2026-10-01"
+                      end_date: "2026-10-27"
+                      total_omzet: 18750000
+                      total_transactions: 342
+                      total_qty: 986
+                    changes:
+                      omzet_percentage: 23.36
+                      transactions_percentage: 22.14
+                      qty_percentage: 21.73
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/analytics/anomalies:
+    get:
+      tags:
+        - Analytics
+      operationId: getSalesAnomalies
+      summary: Deteksi anomali penjualan
+      description: |
+        Mendeteksi produk dengan penjualan yang jauh di atas atau di bawah rata-rata
+        empat minggu terakhir. Hanya dapat diakses oleh owner.
+      responses:
+        '200':
+          description: Hasil deteksi anomali berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnomaliesResponse'
+              examples:
+                success:
+                  summary: Produk dengan anomali penjualan
+                  value:
+                    analysis_window:
+                      start_date: "2026-09-29"
+                      end_date: "2026-10-26"
+                      weeks: 4
+                    generated_at: "2026-10-27T06:00:00.000Z"
+                    data:
+                      - product_id: "665f1a2b3c4d5e6f7a8b9c10"
+                        product_code: "KPI-001"
+                        product_name: "Kopi Susu Gula Aren"
+                        category: "Kopi"
+                        latest_week_qty: 180
+                        four_week_average: 72.5
+                        deviation_percentage: 148.28
+                        status: "above"
+                      - product_id: "665f1a2b3c4d5e6f7a8b9c21"
+                        product_code: "KPI-012"
+                        product_name: "Roti Bakar Keju"
+                        category: "Makanan"
+                        latest_week_qty: 8
+                        four_week_average: 42
+                        deviation_percentage: -80.95
+                        status: "below"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/agent/chat:
+    post:
+      tags:
+        - AI Agent
+      operationId: agentChat
+      summary: Kirim pesan ke AI Agent
+      description: |
+        Mengirim pesan ke AI Agent dan menerima balasan. Jika `session_id` tidak
+        dikirim, server akan membuat sesi baru. Agent dapat memanggil fungsi analitik
+        secara otomatis untuk menjawab pertanyaan owner. Hanya dapat diakses oleh owner.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ChatHistoryInput"
+              $ref: '#/components/schemas/AgentChatRequest'
+            examples:
+              withSession:
+                summary: Melanjutkan sesi yang sudah ada
+                value:
+                  message: "Berapa total omzet minggu ini dan produk apa yang paling laris?"
+                  session_id: "sess-9f8e7d6c5b4a"
+              newSession:
+                summary: Memulai sesi baru
+                value:
+                  message: "Bandingkan penjualan bulan ini dengan bulan lalu."
       responses:
-        "201":
-          description: Respon AI berhasil dibuat dan disimpan
+        '200':
+          description: Balasan AI Agent berhasil dibuat.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ChatHistory"
+                $ref: '#/components/schemas/AgentChatResponse'
+              examples:
+                withFunctionCall:
+                  summary: Balasan dengan eksekusi function call
+                  value:
+                    reply: "Total omzet minggu ini Rp18.750.000 dari 342 transaksi. Produk terlaris adalah Kopi Susu Gula Aren dengan 420 terjual."
+                    session_id: "sess-9f8e7d6c5b4a"
+                    function_call_executed:
+                      name: "get_best_selling_products"
+                      arguments:
+                        start_date: "2026-10-20"
+                        end_date: "2026-10-27"
+                        limit: 5
+                      result:
+                        total_omzet: 18750000
+                        total_transactions: 342
+                        top_product: "Kopi Susu Gula Aren"
+                withoutFunctionCall:
+                  summary: Balasan tanpa eksekusi function call
+                  value:
+                    reply: "Tentu, saya dapat membantu menganalisis penjualan Anda. Silakan sebutkan periode yang ingin dianalisis."
+                    session_id: "sess-1a2b3c4d5e6f"
+                    function_call_executed: null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
-# =============================================================================
-# COMPONENTS SCHEMAS
-# =============================================================================
+  /api/v1/agent/history:
+    get:
+      tags:
+        - AI Agent
+      operationId: getAgentHistory
+      summary: Ambil riwayat percakapan AI Agent
+      description: |
+        Mengambil seluruh pesan dalam satu sesi percakapan berdasarkan `session_id`.
+        Hanya dapat diakses oleh owner.
+      parameters:
+        - $ref: '#/components/parameters/SessionIdParam'
+      responses:
+        '200':
+          description: Riwayat percakapan berhasil diambil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentHistoryResponse'
+              examples:
+                success:
+                  summary: Riwayat percakapan
+                  value:
+                    session_id: "sess-9f8e7d6c5b4a"
+                    messages:
+                      - _id: "66f0b1c2d3e4f5a6b7c8d9e0"
+                        sender: "user"
+                        text: "Berapa total omzet minggu ini dan produk apa yang paling laris?"
+                        function_call: null
+                        timestamp: "2026-10-27T06:12:05.000Z"
+                      - _id: "66f0b1c2d3e4f5a6b7c8d9e1"
+                        sender: "agent"
+                        text: "Saya akan mengambil data penjualan minggu ini terlebih dahulu."
+                        function_call:
+                          name: "get_best_selling_products"
+                          arguments:
+                            start_date: "2026-10-20"
+                            end_date: "2026-10-27"
+                            limit: 5
+                        timestamp: "2026-10-27T06:12:06.000Z"
+                      - _id: "66f0b1c2d3e4f5a6b7c8d9e2"
+                        sender: "agent"
+                        text: "Total omzet minggu ini Rp18.750.000 dari 342 transaksi. Produk terlaris adalah Kopi Susu Gula Aren dengan 420 terjual."
+                        function_call: null
+                        timestamp: "2026-10-27T06:12:08.000Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
 components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Masukkan JWT yang diperoleh dari endpoint login. Format header
+        `Authorization: Bearer <token>`.
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      required: false
+      description: Nomor halaman, dimulai dari 1.
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+        example: 1
+    LimitParam:
+      name: limit
+      in: query
+      required: false
+      description: Jumlah data per halaman.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 10
+        example: 10
+    SearchParam:
+      name: search
+      in: query
+      required: false
+      description: Pencarian berdasarkan nama atau kode produk.
+      schema:
+        type: string
+        example: "kopi"
+    CategoryParam:
+      name: category
+      in: query
+      required: false
+      description: Filter kategori produk.
+      schema:
+        type: string
+        enum:
+          - "Kopi"
+          - "Minuman"
+          - "Makanan"
+          - "Snack"
+          - "Dessert"
+        example: "Kopi"
+    StartDateParam:
+      name: start_date
+      in: query
+      required: false
+      description: Tanggal awal periode dalam format YYYY-MM-DD.
+      schema:
+        type: string
+        format: date
+        example: "2026-10-01"
+    EndDateParam:
+      name: end_date
+      in: query
+      required: false
+      description: Tanggal akhir periode dalam format YYYY-MM-DD.
+      schema:
+        type: string
+        format: date
+        example: "2026-10-27"
+    ThresholdParam:
+      name: threshold
+      in: query
+      required: false
+      description: Ambang batas margin dalam bentuk desimal, contoh 0.15 berarti 15 persen.
+      schema:
+        type: number
+        format: float
+        minimum: 0
+        maximum: 1
+        default: 0.15
+        example: 0.15
+    TopLimitParam:
+      name: limit
+      in: query
+      required: false
+      description: Jumlah produk teratas yang dikembalikan.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 5
+        example: 5
+    IntervalParam:
+      name: interval
+      in: query
+      required: false
+      description: Interval agregasi data tren.
+      schema:
+        type: string
+        enum:
+          - "daily"
+          - "weekly"
+          - "monthly"
+        default: "weekly"
+        example: "weekly"
+    ProductIdQueryParam:
+      name: product_id
+      in: query
+      required: false
+      description: Filter tren berdasarkan ID produk.
+      schema:
+        type: string
+        pattern: '^[a-fA-F0-9]{24}$'
+        example: "665f1a2b3c4d5e6f7a8b9c10"
+    SessionIdParam:
+      name: session_id
+      in: query
+      required: true
+      description: ID sesi percakapan AI Agent.
+      schema:
+        type: string
+        example: "sess-9f8e7d6c5b4a"
+    ProductIdPathParam:
+      name: id
+      in: path
+      required: true
+      description: ID produk (ObjectId MongoDB).
+      schema:
+        type: string
+        pattern: '^[a-fA-F0-9]{24}$'
+        example: "665f1a2b3c4d5e6f7a8b9c14"
+
   schemas:
-    # -------------------------------------------------------------------------
-    # USER SCHEMAS
-    # -------------------------------------------------------------------------
+    ErrorDetail:
+      type: object
+      required:
+        - field
+        - message
+      properties:
+        field:
+          type: string
+          example: "selling_price"
+        message:
+          type: string
+          example: "selling_price harus berupa angka positif"
+
+    ErrorResponse:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: "Terjadi kesalahan pada permintaan"
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErrorDetail'
+
+    Pagination:
+      type: object
+      required:
+        - page
+        - limit
+        - total_items
+        - total_pages
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 10
+        total_items:
+          type: integer
+          example: 24
+        total_pages:
+          type: integer
+          example: 3
+
     User:
       type: object
+      required:
+        - _id
+        - name
+        - email
+        - createdAt
+        - updatedAt
       properties:
         _id:
           type: string
-          description: Primary Key MongoDB ObjectId
-          example: 65f1a2b3c4d5e6f7a8b9c0d1
+          pattern: '^[a-fA-F0-9]{24}$'
+          example: "665f1a2b3c4d5e6f7a8b9c0d"
         name:
           type: string
-          example: Budi Santoso
+          example: "Budi Santoso"
         email:
           type: string
           format: email
-          example: budi.cashier@example.com
-        role:
-          type: string
-          enum: [cashier, admin]
-          example: cashier
-        created_at:
-          type: string
-          format: date-time
-          example: "2026-03-30T08:00:00Z"
-        updated_at:
-          type: string
-          format: date-time
-          example: "2026-03-30T08:00:00Z"
-
-    UserCreateInput:
-      type: object
-      required:
-        - name
-        - email
-        - password
-        - role
-      properties:
-        name:
-          type: string
-          example: Budi Santoso
-        email:
-          type: string
-          format: email
-          example: budi.cashier@example.com
+          example: "owner@tokokopi.id"
         password:
           type: string
           format: password
-          example: secret123
-        role:
+          writeOnly: true
+          description: Password ter-hash yang disimpan di database dan tidak pernah dikembalikan pada response.
+          example: "$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy"
+        createdAt:
           type: string
-          enum: [cashier, admin]
-          example: cashier
+          format: date-time
+          example: "2026-01-15T08:30:00.000Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2026-10-20T09:12:45.000Z"
 
-    # -------------------------------------------------------------------------
-    # PRODUCT SCHEMAS
-    # -------------------------------------------------------------------------
-    Product:
+    Cashier:
       type: object
+      required:
+        - _id
+        - name
+        - username
+        - is_active
+        - createdAt
+        - updatedAt
       properties:
         _id:
           type: string
-          example: 65f1a2b3c4d5e6f7a8b9c0d2
-        sku:
-          type: string
-          example: PRD-00123
+          pattern: '^[a-fA-F0-9]{24}$'
+          example: "665f1a2b3c4d5e6f7a8b9c1e"
         name:
           type: string
-          example: Kopi Susu Gula Aren 250ml
-        selling_price:
-          type: number
-          format: double
-          example: 18000.0
-        cost_price:
-          type: number
-          format: double
-          nullable: true
-          example: 10000.0
-        categories:
-          type: array
-          items:
-            type: string
-          example: ["Minuman", "Kopi", "Ready to Drink"]
-        stock:
-          type: integer
-          example: 45
-        min_stock:
-          type: integer
-          example: 10
-        source:
+          example: "Siti Aminah"
+        username:
           type: string
-          enum: [synced, manual]
-          example: manual
+          example: "kasir_siti"
         is_active:
           type: boolean
-          default: true
           example: true
-        created_at:
+        createdAt:
           type: string
           format: date-time
-          example: "2026-03-30T08:00:00Z"
-        updated_at:
+          example: "2026-02-01T07:00:00.000Z"
+        updatedAt:
           type: string
           format: date-time
-          example: "2026-03-30T08:00:00Z"
+          example: "2026-10-25T06:45:00.000Z"
 
-    ProductInput:
+    ProductCategory:
+      type: string
+      enum:
+        - "Kopi"
+        - "Minuman"
+        - "Makanan"
+        - "Snack"
+        - "Dessert"
+      example: "Kopi"
+
+    Product:
       type: object
       required:
-        - sku
+        - _id
+        - product_code
         - name
+        - category
         - selling_price
-        - categories
-        - stock
-        - min_stock
-        - source
+        - is_active
+        - createdAt
+        - updatedAt
       properties:
-        sku:
+        _id:
           type: string
-          example: PRD-00123
+          pattern: '^[a-fA-F0-9]{24}$'
+          example: "665f1a2b3c4d5e6f7a8b9c10"
+        product_code:
+          type: string
+          pattern: '^KPI-[0-9]{3}$'
+          readOnly: true
+          description: Kode produk unik yang dibuat otomatis dengan format KPI-001.
+          example: "KPI-001"
         name:
           type: string
-          example: Kopi Susu Gula Aren 250ml
+          example: "Kopi Susu Gula Aren"
+        category:
+          $ref: '#/components/schemas/ProductCategory'
         selling_price:
           type: number
           format: double
-          example: 18000.0
+          minimum: 0
+          example: 22000
         cost_price:
           type: number
           format: double
           nullable: true
-          example: 10000.0
-        categories:
-          type: array
-          items:
-            type: string
-          example: ["Minuman", "Kopi", "Ready to Drink"]
-        stock:
-          type: integer
-          example: 45
-        min_stock:
-          type: integer
-          example: 10
-        source:
-          type: string
-          enum: [synced, manual]
-          example: manual
+          minimum: 0
+          description: Harga modal per unit. Dapat bernilai null jika belum diketahui.
+          example: 12000
         is_active:
           type: boolean
-          default: true
+          description: Status produk. Nilai false menandakan produk telah dihapus secara soft delete.
           example: true
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-03-01T08:00:00.000Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2026-10-01T10:30:00.000Z"
 
-    # -------------------------------------------------------------------------
-    # ORDER SCHEMAS
-    # -------------------------------------------------------------------------
     OrderItem:
       type: object
       required:
-        - product_sku
+        - product_id
+        - product_name
+        - category
         - qty
         - price_at_sale
       properties:
-        product_sku:
+        product_id:
           type: string
-          example: PRD-00123
+          pattern: '^[a-fA-F0-9]{24}$'
+          example: "665f1a2b3c4d5e6f7a8b9c10"
+        product_name:
+          type: string
+          description: Nama produk saat transaksi terjadi.
+          example: "Kopi Susu Gula Aren"
+        category:
+          $ref: '#/components/schemas/ProductCategory'
         qty:
           type: integer
+          minimum: 1
           example: 2
         price_at_sale:
           type: number
           format: double
-          example: 18000.0
+          minimum: 0
+          description: Harga jual per unit saat transaksi terjadi.
+          example: 22000
+        cost_at_sale:
+          type: number
+          format: double
+          nullable: true
+          minimum: 0
+          description: Harga modal per unit saat transaksi terjadi. Null jika tidak tersedia.
+          example: 12000
 
     Order:
       type: object
-      properties:
-        _id:
-          type: string
-          example: 65f1a2b3c4d5e6f7a8b9c0d3
-        transaction_id:
-          type: string
-          example: TRX-20260330-001
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/OrderItem"
-        total:
-          type: number
-          format: double
-          example: 51000.0
-        transaction_time:
-          type: string
-          format: date-time
-          example: "2026-03-30T10:15:00Z"
-        synced_at:
-          type: string
-          format: date-time
-          example: "2026-03-30T10:15:05Z"
-
-    OrderInput:
-      type: object
       required:
+        - _id
         - transaction_id
+        - source
         - items
         - total
+        - payment_method
         - transaction_time
-        - synced_at
-      properties:
-        transaction_id:
-          type: string
-          example: TRX-20260330-001
-        items:
-          type: array
-          items:
-            $ref: "#/components/schemas/OrderItem"
-        total:
-          type: number
-          format: double
-          example: 51000.0
-        transaction_time:
-          type: string
-          format: date-time
-          example: "2026-03-30T10:15:00Z"
-        synced_at:
-          type: string
-          format: date-time
-          example: "2026-03-30T10:15:05Z"
-
-    # -------------------------------------------------------------------------
-    # STOCK MOVEMENT SCHEMAS
-    # -------------------------------------------------------------------------
-    StockMovement:
-      type: object
+        - createdAt
       properties:
         _id:
           type: string
-          example: 65f1a2b3c4d5e6f7a8b9c0d4
-        product_sku:
+          pattern: '^[a-fA-F0-9]{24}$'
+          example: "66f0a1b2c3d4e5f6a7b8c9d0"
+        transaction_id:
           type: string
-          example: PRD-00123
-        type:
+          description: ID transaksi unik.
+          example: "TRX-20261027-0001"
+        source:
           type: string
-          enum: [initial, sale, restock]
-          example: sale
-        qty:
-          type: integer
-          example: -2
+          enum:
+            - "pos"
+            - "generator"
+          description: Sumber transaksi, berasal dari POS atau generator data.
+          example: "pos"
+        cashier_id:
+          type: string
+          nullable: true
+          pattern: '^[a-fA-F0-9]{24}$'
+          description: ID kasir yang membuat transaksi. Null untuk transaksi dari generator.
+          example: "665f1a2b3c4d5e6f7a8b9c1e"
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/OrderItem'
+        total:
+          type: number
+          format: double
+          minimum: 0
+          example: 62000
+        payment_method:
+          type: string
+          enum:
+            - "tunai"
+            - "qris"
+            - "transfer"
+          example: "qris"
+        transaction_time:
+          type: string
+          format: date-time
+          example: "2026-10-27T10:15:30.000Z"
         createdAt:
           type: string
           format: date-time
-          example: "2026-03-30T10:15:00Z"
+          example: "2026-10-27T10:15:30.000Z"
 
-    StockMovementInput:
+    AgentMessage:
       type: object
       required:
-        - product_sku
-        - type
-        - qty
+        - sender
+        - text
+        - timestamp
       properties:
-        product_sku:
+        _id:
           type: string
-          example: PRD-00123
-        type:
+          pattern: '^[a-fA-F0-9]{24}$'
+          example: "66f0b1c2d3e4f5a6b7c8d9e0"
+        sender:
           type: string
-          enum: [initial, sale, restock]
-          example: restock
-        qty:
-          type: integer
-          example: 50
+          enum:
+            - "user"
+            - "agent"
+          example: "user"
+        text:
+          type: string
+          example: "Berapa total omzet minggu ini?"
+        function_call:
+          type: object
+          nullable: true
+          description: Informasi function call yang dijalankan agent. Null jika tidak ada.
+          properties:
+            name:
+              type: string
+              example: "get_best_selling_products"
+            arguments:
+              type: object
+              additionalProperties: true
+              example:
+                start_date: "2026-10-20"
+                end_date: "2026-10-27"
+                limit: 5
+          required:
+            - name
+            - arguments
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-10-27T06:12:05.000Z"
 
-    # -------------------------------------------------------------------------
-    # CHAT HISTORY SCHEMAS
-    # -------------------------------------------------------------------------
-    FunctionCall:
+    AgentConversation:
       type: object
-      nullable: true
+      required:
+        - _id
+        - session_id
+        - messages
+        - createdAt
+        - updatedAt
+      properties:
+        _id:
+          type: string
+          pattern: '^[a-fA-F0-9]{24}$'
+          example: "66f0b1c2d3e4f5a6b7c8d9f0"
+        session_id:
+          type: string
+          example: "sess-9f8e7d6c5b4a"
+        user_id:
+          type: string
+          nullable: true
+          pattern: '^[a-fA-F0-9]{24}$'
+          example: "665f1a2b3c4d5e6f7a8b9c0d"
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentMessage'
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-10-27T06:12:05.000Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2026-10-27T06:12:08.000Z"
+
+    LoginOwnerRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: "owner@tokokopi.id"
+        password:
+          type: string
+          format: password
+          example: "rahasia123"
+
+    LoginCashierRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          example: "kasir_siti"
+        password:
+          type: string
+          format: password
+          example: "kasir123"
+
+    LoginOwnerResponse:
+      type: object
+      required:
+        - token
+        - user
+      properties:
+        token:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NjVmMWEyYjNjNGQ1ZTZmN2E4YjljMGQiLCJyb2xlIjoib3duZXIiLCJpYXQiOjE3NjE1NTQ5MzAsImV4cCI6MTc2MTY0MTMzMH0.dGVzdC1zaWduYXR1cmUtZHVtbXk"
+        token_type:
+          type: string
+          example: "Bearer"
+        expires_in:
+          type: integer
+          description: Masa berlaku token dalam detik.
+          example: 86400
+        user:
+          $ref: '#/components/schemas/User'
+
+    LoginCashierResponse:
+      type: object
+      required:
+        - token
+        - cashier
+      properties:
+        token:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NjVmMWEyYjNjNGQ1ZTZmN2E4YjljMWUiLCJyb2xlIjoia2FzaXIiLCJpYXQiOjE3NjE1NTQ5MzAsImV4cCI6MTc2MTY0MTMzMH0.a2FzaXItdGVzdC1zaWduYXR1cmU"
+        token_type:
+          type: string
+          example: "Bearer"
+        expires_in:
+          type: integer
+          description: Masa berlaku token dalam detik.
+          example: 28800
+        cashier:
+          $ref: '#/components/schemas/Cashier'
+
+    ProductCreateRequest:
+      type: object
+      required:
+        - name
+        - category
+        - selling_price
       properties:
         name:
           type: string
-          example: check_product_stock
+          minLength: 1
+          example: "Matcha Latte"
+        category:
+          $ref: '#/components/schemas/ProductCategory'
+        selling_price:
+          type: number
+          format: double
+          minimum: 0
+          example: 24000
+        cost_price:
+          type: number
+          format: double
+          nullable: true
+          minimum: 0
+          example: 13500
+
+    ProductUpdateRequest:
+      type: object
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+          example: "Matcha Latte Premium"
+        category:
+          $ref: '#/components/schemas/ProductCategory'
+        selling_price:
+          type: number
+          format: double
+          minimum: 0
+          example: 25000
+        cost_price:
+          type: number
+          format: double
+          nullable: true
+          minimum: 0
+          example: 13500
+        is_active:
+          type: boolean
+          example: true
+
+    ProductResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: "Produk berhasil dibuat"
+        data:
+          $ref: '#/components/schemas/Product'
+
+    ProductListResponse:
+      type: object
+      required:
+        - data
+        - pagination
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    CreateOrderItem:
+      type: object
+      required:
+        - product_id
+        - qty
+      properties:
+        product_id:
+          type: string
+          pattern: '^[a-fA-F0-9]{24}$'
+          example: "665f1a2b3c4d5e6f7a8b9c10"
+        qty:
+          type: integer
+          minimum: 1
+          example: 2
+
+    CreateOrderRequest:
+      type: object
+      required:
+        - items
+        - payment_method
+      properties:
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/CreateOrderItem'
+        payment_method:
+          type: string
+          enum:
+            - "tunai"
+            - "qris"
+            - "transfer"
+          example: "qris"
+
+    OrderResponse:
+      type: object
+      required:
+        - message
+        - data
+      properties:
+        message:
+          type: string
+          example: "Transaksi berhasil dibuat"
+        data:
+          $ref: '#/components/schemas/Order'
+
+    OrderListResponse:
+      type: object
+      required:
+        - data
+        - pagination
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Order'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    TodayOrdersResponse:
+      type: object
+      required:
+        - date
+        - total_transactions
+        - total_omzet
+        - data
+      properties:
+        date:
+          type: string
+          format: date
+          example: "2026-10-27"
+        total_transactions:
+          type: integer
+          example: 12
+        total_omzet:
+          type: number
+          format: double
+          example: 1875000
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Order'
+
+    AnalyticsSummaryResponse:
+      type: object
+      required:
+        - start_date
+        - end_date
+        - total_omzet
+        - total_transactions
+      properties:
+        start_date:
+          type: string
+          format: date
+          example: "2026-10-01"
+        end_date:
+          type: string
+          format: date
+          example: "2026-10-27"
+        total_omzet:
+          type: number
+          format: double
+          example: 18750000
+        total_transactions:
+          type: integer
+          example: 342
+
+    BestSellingProduct:
+      type: object
+      required:
+        - product_id
+        - product_code
+        - product_name
+        - category
+        - total_qty
+        - total_revenue
+      properties:
+        product_id:
+          type: string
+          pattern: '^[a-fA-F0-9]{24}$'
+          example: "665f1a2b3c4d5e6f7a8b9c10"
+        product_code:
+          type: string
+          example: "KPI-001"
+        product_name:
+          type: string
+          example: "Kopi Susu Gula Aren"
+        category:
+          $ref: '#/components/schemas/ProductCategory'
+        total_qty:
+          type: integer
+          example: 420
+        total_revenue:
+          type: number
+          format: double
+          example: 9240000
+
+    BestSellingResponse:
+      type: object
+      required:
+        - start_date
+        - end_date
+        - limit
+        - data
+      properties:
+        start_date:
+          type: string
+          format: date
+          example: "2026-10-01"
+        end_date:
+          type: string
+          format: date
+          example: "2026-10-27"
+        limit:
+          type: integer
+          example: 5
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/BestSellingProduct'
+
+    LowMarginProduct:
+      type: object
+      required:
+        - product_id
+        - product_code
+        - product_name
+        - category
+        - avg_selling_price
+        - avg_cost_price
+        - margin_per_unit
+        - margin_percentage
+        - total_qty
+        - total_revenue
+        - total_profit
+      properties:
+        product_id:
+          type: string
+          pattern: '^[a-fA-F0-9]{24}$'
+          example: "665f1a2b3c4d5e6f7a8b9c20"
+        product_code:
+          type: string
+          example: "KPI-011"
+        product_name:
+          type: string
+          example: "Americano Dingin"
+        category:
+          $ref: '#/components/schemas/ProductCategory'
+        avg_selling_price:
+          type: number
+          format: double
+          example: 12000
+        avg_cost_price:
+          type: number
+          format: double
+          example: 11000
+        margin_per_unit:
+          type: number
+          format: double
+          example: 1000
+        margin_percentage:
+          type: number
+          format: double
+          description: Persentase margin terhadap harga jual.
+          example: 8.33
+        total_qty:
+          type: integer
+          example: 45
+        total_revenue:
+          type: number
+          format: double
+          example: 540000
+        total_profit:
+          type: number
+          format: double
+          example: 45000
+
+    LowMarginResponse:
+      type: object
+      required:
+        - start_date
+        - end_date
+        - threshold
+        - data
+      properties:
+        start_date:
+          type: string
+          format: date
+          example: "2026-10-01"
+        end_date:
+          type: string
+          format: date
+          example: "2026-10-27"
+        threshold:
+          type: number
+          format: float
+          example: 0.15
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/LowMarginProduct'
+
+    CategorySalesItem:
+      type: object
+      required:
+        - category
+        - total_qty
+        - total_revenue
+      properties:
+        category:
+          $ref: '#/components/schemas/ProductCategory'
+        total_qty:
+          type: integer
+          example: 420
+        total_revenue:
+          type: number
+          format: double
+          example: 8400000
+
+    CategoryTotals:
+      type: object
+      required:
+        - total_qty
+        - total_revenue
+      properties:
+        total_qty:
+          type: integer
+          example: 986
+        total_revenue:
+          type: number
+          format: double
+          example: 18750000
+
+    SalesByCategoryResponse:
+      type: object
+      required:
+        - start_date
+        - end_date
+        - data
+        - totals
+      properties:
+        start_date:
+          type: string
+          format: date
+          example: "2026-10-01"
+        end_date:
+          type: string
+          format: date
+          example: "2026-10-27"
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CategorySalesItem'
+        totals:
+          $ref: '#/components/schemas/CategoryTotals'
+
+    TrendPoint:
+      type: object
+      required:
+        - period
+        - total_qty
+        - total_revenue
+        - total_transactions
+      properties:
+        period:
+          type: string
+          description: Label periode sesuai interval, contoh 2026-10-01, 2026-W40, atau 2026-10.
+          example: "2026-W40"
+        total_qty:
+          type: integer
+          example: 120
+        total_revenue:
+          type: number
+          format: double
+          example: 2640000
+        total_transactions:
+          type: integer
+          example: 98
+
+    TrendFilters:
+      type: object
+      properties:
+        product_id:
+          type: string
+          nullable: true
+          pattern: '^[a-fA-F0-9]{24}$'
+          example: null
+        category:
+          type: string
+          nullable: true
+          example: "Kopi"
+
+    TrendResponse:
+      type: object
+      required:
+        - start_date
+        - end_date
+        - interval
+        - filters
+        - data
+      properties:
+        start_date:
+          type: string
+          format: date
+          example: "2026-09-29"
+        end_date:
+          type: string
+          format: date
+          example: "2026-10-27"
+        interval:
+          type: string
+          enum:
+            - "daily"
+            - "weekly"
+            - "monthly"
+          example: "weekly"
+        filters:
+          $ref: '#/components/schemas/TrendFilters'
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrendPoint'
+
+    PeakHourItem:
+      type: object
+      required:
+        - hour
+        - total_transactions
+        - total_omzet
+      properties:
+        hour:
+          type: string
+          pattern: '^(0[0-9]|1[0-9]|2[0-3])$'
+          description: Jam dalam format dua digit, mulai dari 00 sampai 23.
+          example: "19"
+        total_transactions:
+          type: integer
+          example: 42
+        total_omzet:
+          type: number
+          format: double
+          example: 924000
+
+    PeakHoursResponse:
+      type: object
+      required:
+        - start_date
+        - end_date
+        - data
+      properties:
+        start_date:
+          type: string
+          format: date
+          example: "2026-10-01"
+        end_date:
+          type: string
+          format: date
+          example: "2026-10-27"
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PeakHourItem'
+
+    PeriodMetrics:
+      type: object
+      required:
+        - start_date
+        - end_date
+        - total_omzet
+        - total_transactions
+        - total_qty
+      properties:
+        start_date:
+          type: string
+          format: date
+          example: "2026-09-01"
+        end_date:
+          type: string
+          format: date
+          example: "2026-09-30"
+        total_omzet:
+          type: number
+          format: double
+          example: 15200000
+        total_transactions:
+          type: integer
+          example: 280
+        total_qty:
+          type: integer
+          example: 810
+
+    PeriodChanges:
+      type: object
+      required:
+        - omzet_percentage
+        - transactions_percentage
+        - qty_percentage
+      properties:
+        omzet_percentage:
+          type: number
+          format: double
+          description: Persentase perubahan omzet dari periode pertama ke periode kedua.
+          example: 23.36
+        transactions_percentage:
+          type: number
+          format: double
+          example: 22.14
+        qty_percentage:
+          type: number
+          format: double
+          example: 21.73
+
+    CompareResponse:
+      type: object
+      required:
+        - period1
+        - period2
+        - changes
+      properties:
+        period1:
+          $ref: '#/components/schemas/PeriodMetrics'
+        period2:
+          $ref: '#/components/schemas/PeriodMetrics'
+        changes:
+          $ref: '#/components/schemas/PeriodChanges'
+
+    AnomalyAnalysisWindow:
+      type: object
+      required:
+        - start_date
+        - end_date
+        - weeks
+      properties:
+        start_date:
+          type: string
+          format: date
+          example: "2026-09-29"
+        end_date:
+          type: string
+          format: date
+          example: "2026-10-26"
+        weeks:
+          type: integer
+          example: 4
+
+    AnomalyItem:
+      type: object
+      required:
+        - product_id
+        - product_code
+        - product_name
+        - category
+        - latest_week_qty
+        - four_week_average
+        - deviation_percentage
+        - status
+      properties:
+        product_id:
+          type: string
+          pattern: '^[a-fA-F0-9]{24}$'
+          example: "665f1a2b3c4d5e6f7a8b9c10"
+        product_code:
+          type: string
+          example: "KPI-001"
+        product_name:
+          type: string
+          example: "Kopi Susu Gula Aren"
+        category:
+          $ref: '#/components/schemas/ProductCategory'
+        latest_week_qty:
+          type: integer
+          example: 180
+        four_week_average:
+          type: number
+          format: double
+          example: 72.5
+        deviation_percentage:
+          type: number
+          format: double
+          example: 148.28
+        status:
+          type: string
+          enum:
+            - "above"
+            - "below"
+          example: "above"
+
+    AnomaliesResponse:
+      type: object
+      required:
+        - analysis_window
+        - generated_at
+        - data
+      properties:
+        analysis_window:
+          $ref: '#/components/schemas/AnomalyAnalysisWindow'
+        generated_at:
+          type: string
+          format: date-time
+          example: "2026-10-27T06:00:00.000Z"
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnomalyItem'
+
+    AgentChatRequest:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          minLength: 1
+          example: "Berapa total omzet minggu ini dan produk apa yang paling laris?"
+        session_id:
+          type: string
+          nullable: true
+          description: ID sesi percakapan. Kosongkan untuk membuat sesi baru.
+          example: "sess-9f8e7d6c5b4a"
+
+    FunctionCallExecuted:
+      type: object
+      nullable: true
+      description: Detail function call yang dieksekusi oleh agent. Null jika tidak ada.
+      properties:
+        name:
+          type: string
+          example: "get_best_selling_products"
         arguments:
           type: object
           additionalProperties: true
           example:
-            sku: PRD-00123
+            start_date: "2026-10-20"
+            end_date: "2026-10-27"
+            limit: 5
+        result:
+          type: object
+          additionalProperties: true
+          example:
+            total_omzet: 18750000
+            total_transactions: 342
+            top_product: "Kopi Susu Gula Aren"
+      required:
+        - name
+        - arguments
 
-    ChatHistory:
-      type: object
-      properties:
-        _id:
-          type: string
-          example: 65f1a2b3c4d5e6f7a8b9c0d5
-        user_id:
-          type: string
-          description: MongoDB ObjectId dari koleksi users
-          example: 65f1a2b3c4d5e6f7a8b9c0d1
-        session_id:
-          type: string
-          example: sess-88a9-41bc-b219
-        question:
-          type: string
-          example: Cek sisa stok Kopi Susu Gula Aren
-        answer:
-          type: string
-          example: Stok untuk Kopi Susu Gula Aren (PRD-00123) saat ini tersisa 45 unit.
-        function_call:
-          $ref: "#/components/schemas/FunctionCall"
-        createdAt:
-          type: string
-          format: date-time
-          example: "2026-03-30T11:00:00Z"
-
-    ChatHistoryInput:
+    AgentChatResponse:
       type: object
       required:
-        - user_id
+        - reply
         - session_id
-        - question
+        - function_call_executed
       properties:
-        user_id:
+        reply:
           type: string
-          example: 65f1a2b3c4d5e6f7a8b9c0d1
+          example: "Total omzet minggu ini Rp18.750.000 dari 342 transaksi. Produk terlaris adalah Kopi Susu Gula Aren dengan 420 terjual."
         session_id:
           type: string
-          example: sess-88a9-41bc-b219
-        question:
+          example: "sess-9f8e7d6c5b4a"
+        function_call_executed:
+          $ref: '#/components/schemas/FunctionCallExecuted'
+
+    AgentHistoryResponse:
+      type: object
+      required:
+        - session_id
+        - messages
+      properties:
+        session_id:
           type: string
-          example: Cek sisa stok Kopi Susu Gula Aren
+          example: "sess-9f8e7d6c5b4a"
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentMessage'
+
+  responses:
+    BadRequest:
+      description: Permintaan tidak dapat diproses karena data tidak valid atau produk tidak aktif.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            badRequest:
+              summary: Data transaksi tidak valid
+              value:
+                success: false
+                message: "Produk tidak aktif atau kuantitas tidak valid"
+                errors:
+                  - field: "items[0].qty"
+                    message: "qty harus lebih besar dari 0"
+
+    Unauthorized:
+      description: Token tidak ada, tidak valid, atau sudah kedaluwarsa.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            unauthorized:
+              summary: Token tidak valid
+              value:
+                success: false
+                message: "Unauthorized, token tidak valid atau sudah kedaluwarsa"
+
+    Forbidden:
+      description: Pengguna tidak memiliki peran yang sesuai untuk mengakses endpoint.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            forbidden:
+              summary: Peran tidak diizinkan
+              value:
+                success: false
+                message: "Forbidden, endpoint ini hanya dapat diakses oleh owner"
+
+    NotFound:
+      description: Sumber daya yang diminta tidak ditemukan.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            notFound:
+              summary: Produk tidak ditemukan
+              value:
+                success: false
+                message: "Produk dengan id 665f1a2b3c4d5e6f7a8b9c14 tidak ditemukan"
+
+    ValidationError:
+      description: Validasi request body atau parameter gagal.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            validationError:
+              summary: Validasi gagal
+              value:
+                success: false
+                message: "Validasi gagal"
+                errors:
+                  - field: "selling_price"
+                    message: "selling_price harus berupa angka positif"
+                  - field: "category"
+                    message: "category harus salah satu dari Kopi, Minuman, Makanan, Snack, Dessert"
+
+    InternalServerError:
+      description: Terjadi kesalahan internal pada server.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            internalError:
+              summary: Kesalahan internal
+              value:
+                success: false
+                message: "Terjadi kesalahan internal pada server"
