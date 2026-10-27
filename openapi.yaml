@@ -5,23 +5,28 @@ info:
   version: 1.0.0
   description: |
     Spesifikasi RESTful API untuk aplikasi Sales Analytics dan Point of Sale (POS)
-    berbasis MongoDB. API menyediakan autentikasi owner dan kasir, pengelolaan produk,
-    transaksi POS, riwayat pesanan, analitik penjualan, serta AI Agent untuk membantu
-    owner menganalisis data penjualan.
+    berbasis MongoDB. Seluruh pengguna, baik owner maupun kasir, tersimpan dalam
+    satu koleksi `users` dan memiliki field `role`. API menyediakan autentikasi
+    terpadu, pengelolaan produk, transaksi POS, riwayat pesanan, analitik penjualan,
+    serta AI Agent untuk membantu owner menganalisis data penjualan.
 
     Autentikasi menggunakan JSON Web Token (JWT). Kirimkan token pada header
     `Authorization` dengan format `Bearer <token>`.
 
     Endpoint login tidak memerlukan token. Seluruh endpoint lain memerlukan token
-    yang valid dan sesuai peran (owner atau kasir).
+    yang valid. Otorisasi menggunakan Role-Based Access Control (RBAC):
+    endpoint POS dan katalog produk dapat diakses oleh role `owner` dan `cashier`,
+    sedangkan manajemen produk (create, update, delete), analitik, riwayat pesanan
+    owner, dan AI Agent hanya dapat diakses oleh role `owner`. Akses cashier ke
+    endpoint khusus owner akan menghasilkan `403 Forbidden`.
 
 tags:
   - name: Auth
-    description: Autentikasi owner dan kasir.
+    description: Autentikasi terpadu owner dan kasir melalui satu endpoint.
   - name: Products
-    description: Pengelolaan katalog produk.
+    description: Katalog produk untuk owner dan kasir, serta manajemen produk khusus owner.
   - name: POS Orders
-    description: Transaksi dan riwayat pesanan kasir.
+    description: Transaksi dan riwayat pesanan POS untuk owner dan kasir.
   - name: Owner Orders
     description: Riwayat seluruh pesanan untuk owner.
   - name: Analytics
@@ -43,34 +48,44 @@ paths:
     post:
       tags:
         - Auth
-      operationId: loginOwner
-      summary: Login owner
+      operationId: login
+      summary: Login terpadu owner dan kasir
       description: |
-        Melakukan autentikasi owner menggunakan email dan password.
-        Endpoint ini tidak memerlukan Bearer Token.
+        Melakukan autentikasi untuk seluruh pengguna melalui satu endpoint.
+        Owner dan kasir menggunakan koleksi `users` yang sama dan login dengan
+        `email` serta `password`. Role pengguna (`owner` atau `cashier`) disimpan
+        pada field `role` dan disertakan di dalam JWT serta objek user pada response.
+
+        Endpoint ini tidak memerlukan Bearer Token. Token yang dihasilkan harus
+        dikirim sebagai `Authorization: Bearer <token>` pada endpoint berikutnya.
       security: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/LoginOwnerRequest'
+              $ref: '#/components/schemas/LoginRequest'
             examples:
               owner:
                 summary: Contoh login owner
                 value:
                   email: "owner@tokokopi.id"
                   password: "rahasia123"
+              cashier:
+                summary: Contoh login kasir
+                value:
+                  email: "siti@tokokopi.id"
+                  password: "kasir123"
       responses:
         '200':
-          description: Login owner berhasil.
+          description: Login berhasil untuk role owner maupun cashier.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LoginOwnerResponse'
+                $ref: '#/components/schemas/LoginResponse'
               examples:
-                success:
-                  summary: Login berhasil
+                owner:
+                  summary: Login owner berhasil
                   value:
                     token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NjVmMWEyYjNjNGQ1ZTZmN2E4YjljMGQiLCJyb2xlIjoib3duZXIiLCJpYXQiOjE3NjE1NTQ5MzAsImV4cCI6MTc2MTY0MTMzMH0.dGVzdC1zaWduYXR1cmUtZHVtbXk"
                     token_type: "Bearer"
@@ -79,52 +94,20 @@ paths:
                       _id: "665f1a2b3c4d5e6f7a8b9c0d"
                       name: "Budi Santoso"
                       email: "owner@tokokopi.id"
+                      role: "owner"
                       createdAt: "2026-01-15T08:30:00.000Z"
                       updatedAt: "2026-10-20T09:12:45.000Z"
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  /api/v1/pos/auth/login:
-    post:
-      tags:
-        - Auth
-      operationId: loginCashier
-      summary: Login kasir
-      description: |
-        Melakukan autentikasi kasir menggunakan username dan password.
-        Endpoint ini tidak memerlukan Bearer Token.
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/LoginCashierRequest'
-            examples:
-              cashier:
-                summary: Contoh login kasir
-                value:
-                  username: "kasir_siti"
-                  password: "kasir123"
-      responses:
-        '200':
-          description: Login kasir berhasil.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LoginCashierResponse'
-              examples:
-                success:
-                  summary: Login kasir berhasil
+                cashier:
+                  summary: Login cashier berhasil
                   value:
-                    token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NjVmMWEyYjNjNGQ1ZTZmN2E4YjljMWUiLCJyb2xlIjoia2FzaXIiLCJpYXQiOjE3NjE1NTQ5MzAsImV4cCI6MTc2MTY0MTMzMH0.a2FzaXItdGVzdC1zaWduYXR1cmU"
+                    token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NjVmMWEyYjNjNGQ1ZTZmN2E4YjljMWUiLCJyb2xlIjoiY2FzaGllciIsImlhdCI6MTc2MTU1NDkzMCwiZXhwIjoxNzYxNjQxMzMwfQ.Y2FzaGllci10ZXN0LXNpZ25hdHVyZQ"
                     token_type: "Bearer"
                     expires_in: 28800
-                    cashier:
+                    user:
                       _id: "665f1a2b3c4d5e6f7a8b9c1e"
                       name: "Siti Aminah"
-                      username: "kasir_siti"
-                      is_active: true
+                      email: "siti@tokokopi.id"
+                      role: "cashier"
                       createdAt: "2026-02-01T07:00:00.000Z"
                       updatedAt: "2026-10-25T06:45:00.000Z"
         '401':
@@ -138,7 +121,9 @@ paths:
       summary: Ambil daftar produk
       description: |
         Mengambil daftar produk dengan dukungan pagination, pencarian berdasarkan nama
-        atau kode produk, dan filter kategori. Dapat diakses oleh owner dan kasir.
+        atau kode produk, dan filter kategori. Katalog dapat diakses oleh role
+        `owner` dan `cashier`. Endpoint create, update, dan delete produk hanya
+        dapat diakses oleh role `owner`.
       parameters:
         - $ref: '#/components/parameters/PageParam'
         - $ref: '#/components/parameters/LimitParam'
@@ -206,7 +191,7 @@ paths:
       operationId: createProduct
       summary: Tambah produk baru
       description: |
-        Menambahkan produk baru. Hanya dapat diakses oleh owner.
+        Menambahkan produk baru. Hanya dapat diakses oleh role `owner`. Role `cashier` akan menerima `403 Forbidden`.
         Nilai `product_code` dibuat otomatis oleh server dengan format `KPI-XXX`.
       parameters: []
       requestBody:
@@ -259,7 +244,7 @@ paths:
       operationId: updateProduct
       summary: Perbarui produk
       description: |
-        Memperbarui data produk berdasarkan ID. Hanya dapat diakses oleh owner.
+        Memperbarui data produk berdasarkan ID. Hanya dapat diakses oleh role `owner`. Role `cashier` akan menerima `403 Forbidden`.
         Seluruh field bersifat opsional, tetapi minimal satu field harus dikirim.
       parameters:
         - $ref: '#/components/parameters/ProductIdPathParam'
@@ -317,7 +302,7 @@ paths:
       summary: Nonaktifkan produk
       description: |
         Melakukan soft delete dengan mengubah `is_active` menjadi `false`.
-        Hanya dapat diakses oleh owner.
+        Hanya dapat diakses oleh role `owner`. Role `cashier` akan menerima `403 Forbidden`.
       parameters:
         - $ref: '#/components/parameters/ProductIdPathParam'
       responses:
@@ -356,7 +341,7 @@ paths:
       operationId: createPosOrder
       summary: Buat transaksi POS
       description: |
-        Membuat transaksi baru dari POS. Hanya dapat diakses oleh kasir.
+        Membuat transaksi baru dari POS. Dapat diakses oleh role `cashier` dan `owner`.
         Harga, biaya, dan nama produk diambil langsung dari database pada sisi server,
         sehingga harga tidak dapat dimanipulasi dari request.
       requestBody:
@@ -433,7 +418,7 @@ paths:
       summary: Riwayat transaksi hari ini
       description: |
         Mengambil seluruh transaksi POS pada hari ini. Endpoint bersifat read-only
-        dan hanya dapat diakses oleh kasir.
+        dan dapat diakses oleh role `cashier` dan `owner`.
       responses:
         '200':
           description: Riwayat transaksi hari ini berhasil diambil.
@@ -496,7 +481,7 @@ paths:
       summary: Ambil seluruh riwayat pesanan
       description: |
         Mengambil riwayat seluruh pesanan dengan filter rentang tanggal dan pagination.
-        Hanya dapat diakses oleh owner.
+        Hanya dapat diakses oleh role `owner`. Role `cashier` akan menerima `403 Forbidden`.
       parameters:
         - $ref: '#/components/parameters/StartDateParam'
         - $ref: '#/components/parameters/EndDateParam'
@@ -570,7 +555,7 @@ paths:
       summary: Ringkasan penjualan
       description: |
         Mengambil ringkasan total omzet dan jumlah transaksi pada rentang tanggal.
-        Hanya dapat diakses oleh owner.
+        Hanya dapat diakses oleh role `owner`. Role `cashier` akan menerima `403 Forbidden`.
       parameters:
         - $ref: '#/components/parameters/StartDateParam'
         - $ref: '#/components/parameters/EndDateParam'
@@ -604,7 +589,7 @@ paths:
       summary: Produk terlaris
       description: |
         Mengambil daftar produk terlaris berdasarkan jumlah terjual dan pendapatan
-        pada rentang tanggal. Hanya dapat diakses oleh owner.
+        pada rentang tanggal. Hanya dapat diakses oleh role `owner`. Role `cashier` akan menerima `403 Forbidden`.
       parameters:
         - $ref: '#/components/parameters/StartDateParam'
         - $ref: '#/components/parameters/EndDateParam'
@@ -658,7 +643,7 @@ paths:
       description: |
         Mengambil daftar produk dengan margin rendah atau negatif. Perhitungan hanya
         menggunakan item yang memiliki nilai `cost_at_sale` terisi. Hanya dapat
-        diakses oleh owner.
+        diakses oleh role `owner`. Role `cashier` akan menerima `403 Forbidden`.
       parameters:
         - $ref: '#/components/parameters/StartDateParam'
         - $ref: '#/components/parameters/EndDateParam'
@@ -715,7 +700,7 @@ paths:
       summary: Penjualan per kategori
       description: |
         Mengambil total pendapatan dan jumlah terjual untuk setiap kategori produk
-        pada rentang tanggal. Hanya dapat diakses oleh owner.
+        pada rentang tanggal. Hanya dapat diakses oleh role `owner`. Role `cashier` akan menerima `403 Forbidden`.
       parameters:
         - $ref: '#/components/parameters/StartDateParam'
         - $ref: '#/components/parameters/EndDateParam'
@@ -767,7 +752,7 @@ paths:
       description: |
         Mengambil data deret waktu penjualan berdasarkan interval harian, mingguan,
         atau bulanan. Dapat difilter berdasarkan produk atau kategori. Hanya dapat
-        diakses oleh owner.
+        diakses oleh role `owner`. Role `cashier` akan menerima `403 Forbidden`.
       parameters:
         - $ref: '#/components/parameters/StartDateParam'
         - $ref: '#/components/parameters/EndDateParam'
@@ -823,7 +808,7 @@ paths:
       summary: Distribusi transaksi per jam
       description: |
         Mengambil distribusi jumlah transaksi dan omzet untuk setiap jam dalam
-        rentang tanggal, mulai dari jam 00 sampai 23. Hanya dapat diakses oleh owner.
+        rentang tanggal, mulai dari jam 00 sampai 23. Hanya dapat diakses oleh role `owner`. Role `cashier` akan menerima `403 Forbidden`.
       parameters:
         - $ref: '#/components/parameters/StartDateParam'
         - $ref: '#/components/parameters/EndDateParam'
@@ -880,7 +865,7 @@ paths:
       summary: Bandingkan dua periode
       description: |
         Membandingkan metrik penjualan antara dua periode dan menghitung persentase
-        perubahan omzet, transaksi, dan kuantitas. Hanya dapat diakses oleh owner.
+        perubahan omzet, transaksi, dan kuantitas. Hanya dapat diakses oleh role `owner`. Role `cashier` akan menerima `403 Forbidden`.
       parameters:
         - name: period1_start
           in: query
@@ -956,7 +941,7 @@ paths:
       summary: Deteksi anomali penjualan
       description: |
         Mendeteksi produk dengan penjualan yang jauh di atas atau di bawah rata-rata
-        empat minggu terakhir. Hanya dapat diakses oleh owner.
+        empat minggu terakhir. Hanya dapat diakses oleh role `owner`. Role `cashier` akan menerima `403 Forbidden`.
       responses:
         '200':
           description: Hasil deteksi anomali berhasil diambil.
@@ -1004,7 +989,7 @@ paths:
       description: |
         Mengirim pesan ke AI Agent dan menerima balasan. Jika `session_id` tidak
         dikirim, server akan membuat sesi baru. Agent dapat memanggil fungsi analitik
-        secara otomatis untuk menjawab pertanyaan owner. Hanya dapat diakses oleh owner.
+        secara otomatis untuk menjawab pertanyaan owner. Hanya dapat diakses oleh role `owner`. Role `cashier` akan menerima `403 Forbidden`.
       requestBody:
         required: true
         content:
@@ -1067,7 +1052,7 @@ paths:
       summary: Ambil riwayat percakapan AI Agent
       description: |
         Mengambil seluruh pesan dalam satu sesi percakapan berdasarkan `session_id`.
-        Hanya dapat diakses oleh owner.
+        Hanya dapat diakses oleh role `owner`. Role `cashier` akan menerima `403 Forbidden`.
       parameters:
         - $ref: '#/components/parameters/SessionIdParam'
       responses:
@@ -1117,8 +1102,9 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: |
-        Masukkan JWT yang diperoleh dari endpoint login. Format header
-        `Authorization: Bearer <token>`.
+        Masukkan JWT yang diperoleh dari endpoint login terpadu. Format header
+        `Authorization: Bearer <token>`. JWT membawa identitas user dan klaim
+        `role` (`owner` atau `cashier`) yang digunakan untuk pemeriksaan RBAC.
 
   parameters:
     PageParam:
@@ -1299,10 +1285,14 @@ components:
 
     User:
       type: object
+      description: |
+        Dokumen pengguna terpadu pada koleksi `users`. Koleksi ini menyimpan akun
+        owner dan cashier, yang dibedakan melalui field `role`.
       required:
         - _id
         - name
         - email
+        - role
         - createdAt
         - updatedAt
       properties:
@@ -1317,6 +1307,13 @@ components:
           type: string
           format: email
           example: "owner@tokokopi.id"
+        role:
+          type: string
+          enum:
+            - "owner"
+            - "cashier"
+          description: Peran pengguna yang menentukan hak akses endpoint.
+          example: "owner"
         password:
           type: string
           format: password
@@ -1331,38 +1328,6 @@ components:
           type: string
           format: date-time
           example: "2026-10-20T09:12:45.000Z"
-
-    Cashier:
-      type: object
-      required:
-        - _id
-        - name
-        - username
-        - is_active
-        - createdAt
-        - updatedAt
-      properties:
-        _id:
-          type: string
-          pattern: '^[a-fA-F0-9]{24}$'
-          example: "665f1a2b3c4d5e6f7a8b9c1e"
-        name:
-          type: string
-          example: "Siti Aminah"
-        username:
-          type: string
-          example: "kasir_siti"
-        is_active:
-          type: boolean
-          example: true
-        createdAt:
-          type: string
-          format: date-time
-          example: "2026-02-01T07:00:00.000Z"
-        updatedAt:
-          type: string
-          format: date-time
-          example: "2026-10-25T06:45:00.000Z"
 
     ProductCategory:
       type: string
@@ -1599,7 +1564,7 @@ components:
           format: date-time
           example: "2026-10-27T06:12:08.000Z"
 
-    LoginOwnerRequest:
+    LoginRequest:
       type: object
       required:
         - email
@@ -1608,34 +1573,25 @@ components:
         email:
           type: string
           format: email
+          description: Email pengguna yang terdaftar pada koleksi `users`, baik owner maupun cashier.
           example: "owner@tokokopi.id"
         password:
           type: string
           format: password
+          description: Password pengguna sebelum di-hash.
           example: "rahasia123"
 
-    LoginCashierRequest:
-      type: object
-      required:
-        - username
-        - password
-      properties:
-        username:
-          type: string
-          example: "kasir_siti"
-        password:
-          type: string
-          format: password
-          example: "kasir123"
-
-    LoginOwnerResponse:
+    LoginResponse:
       type: object
       required:
         - token
+        - token_type
+        - expires_in
         - user
       properties:
         token:
           type: string
+          description: JWT token yang digunakan untuk mengakses endpoint terproteksi.
           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NjVmMWEyYjNjNGQ1ZTZmN2E4YjljMGQiLCJyb2xlIjoib3duZXIiLCJpYXQiOjE3NjE1NTQ5MzAsImV4cCI6MTc2MTY0MTMzMH0.dGVzdC1zaWduYXR1cmUtZHVtbXk"
         token_type:
           type: string
@@ -1646,25 +1602,6 @@ components:
           example: 86400
         user:
           $ref: '#/components/schemas/User'
-
-    LoginCashierResponse:
-      type: object
-      required:
-        - token
-        - cashier
-      properties:
-        token:
-          type: string
-          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2NjVmMWEyYjNjNGQ1ZTZmN2E4YjljMWUiLCJyb2xlIjoia2FzaXIiLCJpYXQiOjE3NjE1NTQ5MzAsImV4cCI6MTc2MTY0MTMzMH0.a2FzaXItdGVzdC1zaWduYXR1cmU"
-        token_type:
-          type: string
-          example: "Bearer"
-        expires_in:
-          type: integer
-          description: Masa berlaku token dalam detik.
-          example: 28800
-        cashier:
-          $ref: '#/components/schemas/Cashier'
 
     ProductCreateRequest:
       type: object
