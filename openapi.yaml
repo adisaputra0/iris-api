@@ -64,7 +64,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/LoginRequest'
+              $ref: "#/components/schemas/LoginRequest"
             examples:
               owner:
                 summary: Contoh login owner
@@ -77,12 +77,12 @@ paths:
                   email: "siti@tokokopi.id"
                   password: "kasir123"
       responses:
-        '200':
+        "200":
           description: Login berhasil untuk role owner maupun cashier.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LoginResponse'
+                $ref: "#/components/schemas/LoginResponse"
               examples:
                 owner:
                   summary: Login owner berhasil
@@ -110,8 +110,35 @@ paths:
                       role: "cashier"
                       createdAt: "2026-02-01T07:00:00.000Z"
                       updatedAt: "2026-10-25T06:45:00.000Z"
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/v1/auth/logout:
+    post:
+      tags:
+        - Auth
+      operationId: logout
+      summary: Logout pengguna
+      description: |
+        Mengakhiri sesi pengguna saat ini (baik role `owner` maupun `cashier`).
+        Endpoint ini memerlukan Bearer Token yang valid pada header `Authorization`.
+        Pada implementasi JWT stateless, token dapat dimasukkan ke dalam daftar hitam
+        (blacklist) di server atau dihapus dari penyimpanan sisi klien.
+      responses:
+        "200":
+          description: Logout berhasil.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LogoutResponse"
+              examples:
+                success:
+                  summary: Logout berhasil
+                  value:
+                    success: true
+                    message: "Logout berhasil"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /api/v1/products:
     get:
@@ -125,17 +152,17 @@ paths:
         `owner` dan `cashier`. Endpoint create, update, dan delete produk hanya
         dapat diakses oleh role `owner`.
       parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/LimitParam'
-        - $ref: '#/components/parameters/SearchParam'
-        - $ref: '#/components/parameters/CategoryParam'
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+        - $ref: "#/components/parameters/SearchParam"
+        - $ref: "#/components/parameters/CategoryParam"
       responses:
-        '200':
+        "200":
           description: Daftar produk berhasil diambil.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProductListResponse'
+                $ref: "#/components/schemas/ProductListResponse"
               examples:
                 success:
                   summary: Daftar produk dengan pagination
@@ -182,8 +209,8 @@ paths:
                       limit: 10
                       total_items: 24
                       total_pages: 3
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
     post:
       tags:
@@ -199,7 +226,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ProductCreateRequest'
+              $ref: "#/components/schemas/ProductCreateRequest"
             examples:
               newProduct:
                 summary: Contoh produk baru
@@ -209,12 +236,12 @@ paths:
                   selling_price: 24000
                   cost_price: 13500
       responses:
-        '201':
+        "201":
           description: Produk berhasil dibuat.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProductResponse'
+                $ref: "#/components/schemas/ProductResponse"
               examples:
                 created:
                   summary: Produk berhasil dibuat
@@ -230,12 +257,12 @@ paths:
                       is_active: true
                       createdAt: "2026-10-27T03:15:00.000Z"
                       updatedAt: "2026-10-27T03:15:00.000Z"
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
 
   /api/v1/products/{id}:
     put:
@@ -247,13 +274,13 @@ paths:
         Memperbarui data produk berdasarkan ID. Hanya dapat diakses oleh role `owner`. Role `cashier` akan menerima `403 Forbidden`.
         Seluruh field bersifat opsional, tetapi minimal satu field harus dikirim.
       parameters:
-        - $ref: '#/components/parameters/ProductIdPathParam'
+        - $ref: "#/components/parameters/ProductIdPathParam"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ProductUpdateRequest'
+              $ref: "#/components/schemas/ProductUpdateRequest"
             examples:
               updatePrice:
                 summary: Contoh memperbarui harga
@@ -265,12 +292,12 @@ paths:
                 value:
                   is_active: false
       responses:
-        '200':
+        "200":
           description: Produk berhasil diperbarui.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProductResponse'
+                $ref: "#/components/schemas/ProductResponse"
               examples:
                 updated:
                   summary: Produk berhasil diperbarui
@@ -286,14 +313,14 @@ paths:
                       is_active: true
                       createdAt: "2026-10-27T03:15:00.000Z"
                       updatedAt: "2026-10-27T04:20:00.000Z"
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
 
     delete:
       tags:
@@ -304,14 +331,14 @@ paths:
         Melakukan soft delete dengan mengubah `is_active` menjadi `false`.
         Hanya dapat diakses oleh role `owner`. Role `cashier` akan menerima `403 Forbidden`.
       parameters:
-        - $ref: '#/components/parameters/ProductIdPathParam'
+        - $ref: "#/components/parameters/ProductIdPathParam"
       responses:
-        '200':
+        "200":
           description: Produk berhasil dinonaktifkan.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProductResponse'
+                $ref: "#/components/schemas/ProductResponse"
               examples:
                 deactivated:
                   summary: Produk berhasil dinonaktifkan
@@ -327,12 +354,12 @@ paths:
                       is_active: false
                       createdAt: "2026-10-27T03:15:00.000Z"
                       updatedAt: "2026-10-27T05:05:00.000Z"
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /api/v1/pos/orders:
     post:
@@ -349,7 +376,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateOrderRequest'
+              $ref: "#/components/schemas/CreateOrderRequest"
             examples:
               qrisOrder:
                 summary: Contoh transaksi dengan QRIS
@@ -368,12 +395,12 @@ paths:
                       qty: 3
                   payment_method: "tunai"
       responses:
-        '201':
+        "201":
           description: Transaksi POS berhasil dibuat.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OrderResponse'
+                $ref: "#/components/schemas/OrderResponse"
               examples:
                 created:
                   summary: Transaksi berhasil dibuat
@@ -401,14 +428,14 @@ paths:
                       payment_method: "qris"
                       transaction_time: "2026-10-27T10:15:30.000Z"
                       createdAt: "2026-10-27T10:15:30.000Z"
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
 
   /api/v1/pos/orders/today:
     get:
@@ -420,12 +447,12 @@ paths:
         Mengambil seluruh transaksi POS pada hari ini. Endpoint bersifat read-only
         dan dapat diakses oleh role `cashier` dan `owner`.
       responses:
-        '200':
+        "200":
           description: Riwayat transaksi hari ini berhasil diambil.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TodayOrdersResponse'
+                $ref: "#/components/schemas/TodayOrdersResponse"
               examples:
                 success:
                   summary: Transaksi hari ini
@@ -470,8 +497,8 @@ paths:
                         payment_method: "tunai"
                         transaction_time: "2026-10-27T10:42:11.000Z"
                         createdAt: "2026-10-27T10:42:11.000Z"
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /api/v1/orders:
     get:
@@ -483,17 +510,17 @@ paths:
         Mengambil riwayat seluruh pesanan dengan filter rentang tanggal dan pagination.
         Hanya dapat diakses oleh role `owner`. Role `cashier` akan menerima `403 Forbidden`.
       parameters:
-        - $ref: '#/components/parameters/StartDateParam'
-        - $ref: '#/components/parameters/EndDateParam'
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/LimitParam'
+        - $ref: "#/components/parameters/StartDateParam"
+        - $ref: "#/components/parameters/EndDateParam"
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
       responses:
-        '200':
+        "200":
           description: Riwayat pesanan berhasil diambil.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OrderListResponse'
+                $ref: "#/components/schemas/OrderListResponse"
               examples:
                 success:
                   summary: Riwayat pesanan dengan pagination
@@ -540,12 +567,12 @@ paths:
                       limit: 10
                       total_items: 342
                       total_pages: 35
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
 
   /api/v1/analytics/summary:
     get:
@@ -557,15 +584,15 @@ paths:
         Mengambil ringkasan total omzet dan jumlah transaksi pada rentang tanggal.
         Hanya dapat diakses oleh role `owner`. Role `cashier` akan menerima `403 Forbidden`.
       parameters:
-        - $ref: '#/components/parameters/StartDateParam'
-        - $ref: '#/components/parameters/EndDateParam'
+        - $ref: "#/components/parameters/StartDateParam"
+        - $ref: "#/components/parameters/EndDateParam"
       responses:
-        '200':
+        "200":
           description: Ringkasan penjualan berhasil diambil.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AnalyticsSummaryResponse'
+                $ref: "#/components/schemas/AnalyticsSummaryResponse"
               examples:
                 success:
                   summary: Ringkasan penjualan
@@ -574,12 +601,12 @@ paths:
                     end_date: "2026-10-27"
                     total_omzet: 18750000
                     total_transactions: 342
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
 
   /api/v1/analytics/best-selling:
     get:
@@ -591,16 +618,16 @@ paths:
         Mengambil daftar produk terlaris berdasarkan jumlah terjual dan pendapatan
         pada rentang tanggal. Hanya dapat diakses oleh role `owner`. Role `cashier` akan menerima `403 Forbidden`.
       parameters:
-        - $ref: '#/components/parameters/StartDateParam'
-        - $ref: '#/components/parameters/EndDateParam'
-        - $ref: '#/components/parameters/TopLimitParam'
+        - $ref: "#/components/parameters/StartDateParam"
+        - $ref: "#/components/parameters/EndDateParam"
+        - $ref: "#/components/parameters/TopLimitParam"
       responses:
-        '200':
+        "200":
           description: Daftar produk terlaris berhasil diambil.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BestSellingResponse'
+                $ref: "#/components/schemas/BestSellingResponse"
               examples:
                 success:
                   summary: Lima produk terlaris
@@ -627,12 +654,12 @@ paths:
                         category: "Snack"
                         total_qty: 90
                         total_revenue: 1620000
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
 
   /api/v1/analytics/low-margin:
     get:
@@ -645,16 +672,16 @@ paths:
         menggunakan item yang memiliki nilai `cost_at_sale` terisi. Hanya dapat
         diakses oleh role `owner`. Role `cashier` akan menerima `403 Forbidden`.
       parameters:
-        - $ref: '#/components/parameters/StartDateParam'
-        - $ref: '#/components/parameters/EndDateParam'
-        - $ref: '#/components/parameters/ThresholdParam'
+        - $ref: "#/components/parameters/StartDateParam"
+        - $ref: "#/components/parameters/EndDateParam"
+        - $ref: "#/components/parameters/ThresholdParam"
       responses:
-        '200':
+        "200":
           description: Daftar produk bermargin rendah berhasil diambil.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LowMarginResponse'
+                $ref: "#/components/schemas/LowMarginResponse"
               examples:
                 success:
                   summary: Produk dengan margin di bawah threshold
@@ -685,12 +712,12 @@ paths:
                         total_qty: 12
                         total_revenue: 180000
                         total_profit: -6000
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
 
   /api/v1/analytics/sales-by-category:
     get:
@@ -702,15 +729,15 @@ paths:
         Mengambil total pendapatan dan jumlah terjual untuk setiap kategori produk
         pada rentang tanggal. Hanya dapat diakses oleh role `owner`. Role `cashier` akan menerima `403 Forbidden`.
       parameters:
-        - $ref: '#/components/parameters/StartDateParam'
-        - $ref: '#/components/parameters/EndDateParam'
+        - $ref: "#/components/parameters/StartDateParam"
+        - $ref: "#/components/parameters/EndDateParam"
       responses:
-        '200':
+        "200":
           description: Penjualan per kategori berhasil diambil.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SalesByCategoryResponse'
+                $ref: "#/components/schemas/SalesByCategoryResponse"
               examples:
                 success:
                   summary: Pendapatan dan kuantitas per kategori
@@ -736,12 +763,12 @@ paths:
                     totals:
                       total_qty: 986
                       total_revenue: 18750000
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
 
   /api/v1/analytics/trend:
     get:
@@ -754,18 +781,18 @@ paths:
         atau bulanan. Dapat difilter berdasarkan produk atau kategori. Hanya dapat
         diakses oleh role `owner`. Role `cashier` akan menerima `403 Forbidden`.
       parameters:
-        - $ref: '#/components/parameters/StartDateParam'
-        - $ref: '#/components/parameters/EndDateParam'
-        - $ref: '#/components/parameters/IntervalParam'
-        - $ref: '#/components/parameters/ProductIdQueryParam'
-        - $ref: '#/components/parameters/CategoryParam'
+        - $ref: "#/components/parameters/StartDateParam"
+        - $ref: "#/components/parameters/EndDateParam"
+        - $ref: "#/components/parameters/IntervalParam"
+        - $ref: "#/components/parameters/ProductIdQueryParam"
+        - $ref: "#/components/parameters/CategoryParam"
       responses:
-        '200':
+        "200":
           description: Data tren penjualan berhasil diambil.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TrendResponse'
+                $ref: "#/components/schemas/TrendResponse"
               examples:
                 success:
                   summary: Tren penjualan mingguan kategori Kopi
@@ -793,12 +820,12 @@ paths:
                         total_qty: 149
                         total_revenue: 3278000
                         total_transactions: 118
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
 
   /api/v1/analytics/peak-hours:
     get:
@@ -810,15 +837,15 @@ paths:
         Mengambil distribusi jumlah transaksi dan omzet untuk setiap jam dalam
         rentang tanggal, mulai dari jam 00 sampai 23. Hanya dapat diakses oleh role `owner`. Role `cashier` akan menerima `403 Forbidden`.
       parameters:
-        - $ref: '#/components/parameters/StartDateParam'
-        - $ref: '#/components/parameters/EndDateParam'
+        - $ref: "#/components/parameters/StartDateParam"
+        - $ref: "#/components/parameters/EndDateParam"
       responses:
-        '200':
+        "200":
           description: Distribusi transaksi per jam berhasil diambil.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PeakHoursResponse'
+                $ref: "#/components/schemas/PeakHoursResponse"
               examples:
                 success:
                   summary: Distribusi transaksi per jam
@@ -850,12 +877,12 @@ paths:
                       - hour: "20"
                         total_transactions: 29
                         total_omzet: 638000
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
 
   /api/v1/analytics/compare:
     get:
@@ -900,12 +927,12 @@ paths:
             format: date
             example: "2026-10-27"
       responses:
-        '200':
+        "200":
           description: Perbandingan periode berhasil dihitung.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CompareResponse'
+                $ref: "#/components/schemas/CompareResponse"
               examples:
                 success:
                   summary: Perbandingan September dan Oktober
@@ -926,12 +953,12 @@ paths:
                       omzet_percentage: 23.36
                       transactions_percentage: 22.14
                       qty_percentage: 21.73
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
 
   /api/v1/analytics/anomalies:
     get:
@@ -943,12 +970,12 @@ paths:
         Mendeteksi produk dengan penjualan yang jauh di atas atau di bawah rata-rata
         empat minggu terakhir. Hanya dapat diakses oleh role `owner`. Role `cashier` akan menerima `403 Forbidden`.
       responses:
-        '200':
+        "200":
           description: Hasil deteksi anomali berhasil diambil.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AnomaliesResponse'
+                $ref: "#/components/schemas/AnomaliesResponse"
               examples:
                 success:
                   summary: Produk dengan anomali penjualan
@@ -975,10 +1002,10 @@ paths:
                         four_week_average: 42
                         deviation_percentage: -80.95
                         status: "below"
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
   /api/v1/agent/chat:
     post:
@@ -995,7 +1022,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AgentChatRequest'
+              $ref: "#/components/schemas/AgentChatRequest"
             examples:
               withSession:
                 summary: Melanjutkan sesi yang sudah ada
@@ -1007,12 +1034,12 @@ paths:
                 value:
                   message: "Bandingkan penjualan bulan ini dengan bulan lalu."
       responses:
-        '200':
+        "200":
           description: Balasan AI Agent berhasil dibuat.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AgentChatResponse'
+                $ref: "#/components/schemas/AgentChatResponse"
               examples:
                 withFunctionCall:
                   summary: Balasan dengan eksekusi function call
@@ -1035,14 +1062,14 @@ paths:
                     reply: "Tentu, saya dapat membantu menganalisis penjualan Anda. Silakan sebutkan periode yang ingin dianalisis."
                     session_id: "sess-1a2b3c4d5e6f"
                     function_call_executed: null
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '422':
-          $ref: '#/components/responses/ValidationError'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
 
   /api/v1/agent/history:
     get:
@@ -1054,14 +1081,14 @@ paths:
         Mengambil seluruh pesan dalam satu sesi percakapan berdasarkan `session_id`.
         Hanya dapat diakses oleh role `owner`. Role `cashier` akan menerima `403 Forbidden`.
       parameters:
-        - $ref: '#/components/parameters/SessionIdParam'
+        - $ref: "#/components/parameters/SessionIdParam"
       responses:
-        '200':
+        "200":
           description: Riwayat percakapan berhasil diambil.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AgentHistoryResponse'
+                $ref: "#/components/schemas/AgentHistoryResponse"
               examples:
                 success:
                   summary: Riwayat percakapan
@@ -1088,12 +1115,12 @@ paths:
                         text: "Total omzet minggu ini Rp18.750.000 dari 342 transaksi. Produk terlaris adalah Kopi Susu Gula Aren dengan 420 terjual."
                         function_call: null
                         timestamp: "2026-10-27T06:12:08.000Z"
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
 components:
   securitySchemes:
@@ -1211,7 +1238,7 @@ components:
       description: Filter tren berdasarkan ID produk.
       schema:
         type: string
-        pattern: '^[a-fA-F0-9]{24}$'
+        pattern: "^[a-fA-F0-9]{24}$"
         example: "665f1a2b3c4d5e6f7a8b9c10"
     SessionIdParam:
       name: session_id
@@ -1228,7 +1255,7 @@ components:
       description: ID produk (ObjectId MongoDB).
       schema:
         type: string
-        pattern: '^[a-fA-F0-9]{24}$'
+        pattern: "^[a-fA-F0-9]{24}$"
         example: "665f1a2b3c4d5e6f7a8b9c14"
 
   schemas:
@@ -1260,7 +1287,7 @@ components:
         errors:
           type: array
           items:
-            $ref: '#/components/schemas/ErrorDetail'
+            $ref: "#/components/schemas/ErrorDetail"
 
     Pagination:
       type: object
@@ -1298,7 +1325,7 @@ components:
       properties:
         _id:
           type: string
-          pattern: '^[a-fA-F0-9]{24}$'
+          pattern: "^[a-fA-F0-9]{24}$"
           example: "665f1a2b3c4d5e6f7a8b9c0d"
         name:
           type: string
@@ -1353,11 +1380,11 @@ components:
       properties:
         _id:
           type: string
-          pattern: '^[a-fA-F0-9]{24}$'
+          pattern: "^[a-fA-F0-9]{24}$"
           example: "665f1a2b3c4d5e6f7a8b9c10"
         product_code:
           type: string
-          pattern: '^KPI-[0-9]{3}$'
+          pattern: "^KPI-[0-9]{3}$"
           readOnly: true
           description: Kode produk unik yang dibuat otomatis dengan format KPI-001.
           example: "KPI-001"
@@ -1365,7 +1392,7 @@ components:
           type: string
           example: "Kopi Susu Gula Aren"
         category:
-          $ref: '#/components/schemas/ProductCategory'
+          $ref: "#/components/schemas/ProductCategory"
         selling_price:
           type: number
           format: double
@@ -1402,14 +1429,14 @@ components:
       properties:
         product_id:
           type: string
-          pattern: '^[a-fA-F0-9]{24}$'
+          pattern: "^[a-fA-F0-9]{24}$"
           example: "665f1a2b3c4d5e6f7a8b9c10"
         product_name:
           type: string
           description: Nama produk saat transaksi terjadi.
           example: "Kopi Susu Gula Aren"
         category:
-          $ref: '#/components/schemas/ProductCategory'
+          $ref: "#/components/schemas/ProductCategory"
         qty:
           type: integer
           minimum: 1
@@ -1442,7 +1469,7 @@ components:
       properties:
         _id:
           type: string
-          pattern: '^[a-fA-F0-9]{24}$'
+          pattern: "^[a-fA-F0-9]{24}$"
           example: "66f0a1b2c3d4e5f6a7b8c9d0"
         transaction_id:
           type: string
@@ -1458,14 +1485,14 @@ components:
         cashier_id:
           type: string
           nullable: true
-          pattern: '^[a-fA-F0-9]{24}$'
+          pattern: "^[a-fA-F0-9]{24}$"
           description: ID kasir yang membuat transaksi. Null untuk transaksi dari generator.
           example: "665f1a2b3c4d5e6f7a8b9c1e"
         items:
           type: array
           minItems: 1
           items:
-            $ref: '#/components/schemas/OrderItem'
+            $ref: "#/components/schemas/OrderItem"
         total:
           type: number
           format: double
@@ -1496,7 +1523,7 @@ components:
       properties:
         _id:
           type: string
-          pattern: '^[a-fA-F0-9]{24}$'
+          pattern: "^[a-fA-F0-9]{24}$"
           example: "66f0b1c2d3e4f5a6b7c8d9e0"
         sender:
           type: string
@@ -1541,7 +1568,7 @@ components:
       properties:
         _id:
           type: string
-          pattern: '^[a-fA-F0-9]{24}$'
+          pattern: "^[a-fA-F0-9]{24}$"
           example: "66f0b1c2d3e4f5a6b7c8d9f0"
         session_id:
           type: string
@@ -1549,12 +1576,12 @@ components:
         user_id:
           type: string
           nullable: true
-          pattern: '^[a-fA-F0-9]{24}$'
+          pattern: "^[a-fA-F0-9]{24}$"
           example: "665f1a2b3c4d5e6f7a8b9c0d"
         messages:
           type: array
           items:
-            $ref: '#/components/schemas/AgentMessage'
+            $ref: "#/components/schemas/AgentMessage"
         createdAt:
           type: string
           format: date-time
@@ -1601,7 +1628,20 @@ components:
           description: Masa berlaku token dalam detik.
           example: 86400
         user:
-          $ref: '#/components/schemas/User'
+          $ref: "#/components/schemas/User"
+
+    LogoutResponse:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Logout berhasil"
 
     ProductCreateRequest:
       type: object
@@ -1615,7 +1655,7 @@ components:
           minLength: 1
           example: "Matcha Latte"
         category:
-          $ref: '#/components/schemas/ProductCategory'
+          $ref: "#/components/schemas/ProductCategory"
         selling_price:
           type: number
           format: double
@@ -1637,7 +1677,7 @@ components:
           minLength: 1
           example: "Matcha Latte Premium"
         category:
-          $ref: '#/components/schemas/ProductCategory'
+          $ref: "#/components/schemas/ProductCategory"
         selling_price:
           type: number
           format: double
@@ -1663,7 +1703,7 @@ components:
           type: string
           example: "Produk berhasil dibuat"
         data:
-          $ref: '#/components/schemas/Product'
+          $ref: "#/components/schemas/Product"
 
     ProductListResponse:
       type: object
@@ -1674,9 +1714,9 @@ components:
         data:
           type: array
           items:
-            $ref: '#/components/schemas/Product'
+            $ref: "#/components/schemas/Product"
         pagination:
-          $ref: '#/components/schemas/Pagination'
+          $ref: "#/components/schemas/Pagination"
 
     CreateOrderItem:
       type: object
@@ -1686,7 +1726,7 @@ components:
       properties:
         product_id:
           type: string
-          pattern: '^[a-fA-F0-9]{24}$'
+          pattern: "^[a-fA-F0-9]{24}$"
           example: "665f1a2b3c4d5e6f7a8b9c10"
         qty:
           type: integer
@@ -1703,7 +1743,7 @@ components:
           type: array
           minItems: 1
           items:
-            $ref: '#/components/schemas/CreateOrderItem'
+            $ref: "#/components/schemas/CreateOrderItem"
         payment_method:
           type: string
           enum:
@@ -1722,7 +1762,7 @@ components:
           type: string
           example: "Transaksi berhasil dibuat"
         data:
-          $ref: '#/components/schemas/Order'
+          $ref: "#/components/schemas/Order"
 
     OrderListResponse:
       type: object
@@ -1733,9 +1773,9 @@ components:
         data:
           type: array
           items:
-            $ref: '#/components/schemas/Order'
+            $ref: "#/components/schemas/Order"
         pagination:
-          $ref: '#/components/schemas/Pagination'
+          $ref: "#/components/schemas/Pagination"
 
     TodayOrdersResponse:
       type: object
@@ -1759,7 +1799,7 @@ components:
         data:
           type: array
           items:
-            $ref: '#/components/schemas/Order'
+            $ref: "#/components/schemas/Order"
 
     AnalyticsSummaryResponse:
       type: object
@@ -1797,7 +1837,7 @@ components:
       properties:
         product_id:
           type: string
-          pattern: '^[a-fA-F0-9]{24}$'
+          pattern: "^[a-fA-F0-9]{24}$"
           example: "665f1a2b3c4d5e6f7a8b9c10"
         product_code:
           type: string
@@ -1806,7 +1846,7 @@ components:
           type: string
           example: "Kopi Susu Gula Aren"
         category:
-          $ref: '#/components/schemas/ProductCategory'
+          $ref: "#/components/schemas/ProductCategory"
         total_qty:
           type: integer
           example: 420
@@ -1837,7 +1877,7 @@ components:
         data:
           type: array
           items:
-            $ref: '#/components/schemas/BestSellingProduct'
+            $ref: "#/components/schemas/BestSellingProduct"
 
     LowMarginProduct:
       type: object
@@ -1856,7 +1896,7 @@ components:
       properties:
         product_id:
           type: string
-          pattern: '^[a-fA-F0-9]{24}$'
+          pattern: "^[a-fA-F0-9]{24}$"
           example: "665f1a2b3c4d5e6f7a8b9c20"
         product_code:
           type: string
@@ -1865,7 +1905,7 @@ components:
           type: string
           example: "Americano Dingin"
         category:
-          $ref: '#/components/schemas/ProductCategory'
+          $ref: "#/components/schemas/ProductCategory"
         avg_selling_price:
           type: number
           format: double
@@ -1918,7 +1958,7 @@ components:
         data:
           type: array
           items:
-            $ref: '#/components/schemas/LowMarginProduct'
+            $ref: "#/components/schemas/LowMarginProduct"
 
     CategorySalesItem:
       type: object
@@ -1928,7 +1968,7 @@ components:
         - total_revenue
       properties:
         category:
-          $ref: '#/components/schemas/ProductCategory'
+          $ref: "#/components/schemas/ProductCategory"
         total_qty:
           type: integer
           example: 420
@@ -1970,9 +2010,9 @@ components:
         data:
           type: array
           items:
-            $ref: '#/components/schemas/CategorySalesItem'
+            $ref: "#/components/schemas/CategorySalesItem"
         totals:
-          $ref: '#/components/schemas/CategoryTotals'
+          $ref: "#/components/schemas/CategoryTotals"
 
     TrendPoint:
       type: object
@@ -2003,7 +2043,7 @@ components:
         product_id:
           type: string
           nullable: true
-          pattern: '^[a-fA-F0-9]{24}$'
+          pattern: "^[a-fA-F0-9]{24}$"
           example: null
         category:
           type: string
@@ -2035,11 +2075,11 @@ components:
             - "monthly"
           example: "weekly"
         filters:
-          $ref: '#/components/schemas/TrendFilters'
+          $ref: "#/components/schemas/TrendFilters"
         data:
           type: array
           items:
-            $ref: '#/components/schemas/TrendPoint'
+            $ref: "#/components/schemas/TrendPoint"
 
     PeakHourItem:
       type: object
@@ -2050,7 +2090,7 @@ components:
       properties:
         hour:
           type: string
-          pattern: '^(0[0-9]|1[0-9]|2[0-3])$'
+          pattern: "^(0[0-9]|1[0-9]|2[0-3])$"
           description: Jam dalam format dua digit, mulai dari 00 sampai 23.
           example: "19"
         total_transactions:
@@ -2079,7 +2119,7 @@ components:
         data:
           type: array
           items:
-            $ref: '#/components/schemas/PeakHourItem'
+            $ref: "#/components/schemas/PeakHourItem"
 
     PeriodMetrics:
       type: object
@@ -2138,11 +2178,11 @@ components:
         - changes
       properties:
         period1:
-          $ref: '#/components/schemas/PeriodMetrics'
+          $ref: "#/components/schemas/PeriodMetrics"
         period2:
-          $ref: '#/components/schemas/PeriodMetrics'
+          $ref: "#/components/schemas/PeriodMetrics"
         changes:
-          $ref: '#/components/schemas/PeriodChanges'
+          $ref: "#/components/schemas/PeriodChanges"
 
     AnomalyAnalysisWindow:
       type: object
@@ -2177,7 +2217,7 @@ components:
       properties:
         product_id:
           type: string
-          pattern: '^[a-fA-F0-9]{24}$'
+          pattern: "^[a-fA-F0-9]{24}$"
           example: "665f1a2b3c4d5e6f7a8b9c10"
         product_code:
           type: string
@@ -2186,7 +2226,7 @@ components:
           type: string
           example: "Kopi Susu Gula Aren"
         category:
-          $ref: '#/components/schemas/ProductCategory'
+          $ref: "#/components/schemas/ProductCategory"
         latest_week_qty:
           type: integer
           example: 180
@@ -2213,7 +2253,7 @@ components:
         - data
       properties:
         analysis_window:
-          $ref: '#/components/schemas/AnomalyAnalysisWindow'
+          $ref: "#/components/schemas/AnomalyAnalysisWindow"
         generated_at:
           type: string
           format: date-time
@@ -2221,7 +2261,7 @@ components:
         data:
           type: array
           items:
-            $ref: '#/components/schemas/AnomalyItem'
+            $ref: "#/components/schemas/AnomalyItem"
 
     AgentChatRequest:
       type: object
@@ -2278,7 +2318,7 @@ components:
           type: string
           example: "sess-9f8e7d6c5b4a"
         function_call_executed:
-          $ref: '#/components/schemas/FunctionCallExecuted'
+          $ref: "#/components/schemas/FunctionCallExecuted"
 
     AgentHistoryResponse:
       type: object
@@ -2292,7 +2332,7 @@ components:
         messages:
           type: array
           items:
-            $ref: '#/components/schemas/AgentMessage'
+            $ref: "#/components/schemas/AgentMessage"
 
   responses:
     BadRequest:
@@ -2300,7 +2340,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: "#/components/schemas/ErrorResponse"
           examples:
             badRequest:
               summary: Data transaksi tidak valid
@@ -2316,7 +2356,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: "#/components/schemas/ErrorResponse"
           examples:
             unauthorized:
               summary: Token tidak valid
@@ -2329,7 +2369,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: "#/components/schemas/ErrorResponse"
           examples:
             forbidden:
               summary: Peran tidak diizinkan
@@ -2342,7 +2382,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: "#/components/schemas/ErrorResponse"
           examples:
             notFound:
               summary: Produk tidak ditemukan
@@ -2355,7 +2395,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: "#/components/schemas/ErrorResponse"
           examples:
             validationError:
               summary: Validasi gagal
@@ -2373,7 +2413,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: "#/components/schemas/ErrorResponse"
           examples:
             internalError:
               summary: Kesalahan internal
