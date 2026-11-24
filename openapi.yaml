@@ -69,13 +69,13 @@ paths:
               owner:
                 summary: Contoh login owner
                 value:
-                  email: "owner@tokokopi.id"
-                  password: "rahasia123"
+                  email: "admin@pos.com"
+                  password: "password123"
               cashier:
                 summary: Contoh login kasir
                 value:
-                  email: "siti@tokokopi.id"
-                  password: "kasir123"
+                  email: "kasir@pos.com"
+                  password: "password123"
       responses:
         "200":
           description: Login berhasil untuk role owner maupun cashier.
@@ -93,7 +93,7 @@ paths:
                     user:
                       _id: "665f1a2b3c4d5e6f7a8b9c0d"
                       name: "Budi Santoso"
-                      email: "owner@tokokopi.id"
+                      email: "admin@pos.com"
                       role: "owner"
                       createdAt: "2026-01-15T08:30:00.000Z"
                       updatedAt: "2026-10-20T09:12:45.000Z"
@@ -106,7 +106,7 @@ paths:
                     user:
                       _id: "665f1a2b3c4d5e6f7a8b9c1e"
                       name: "Siti Aminah"
-                      email: "siti@tokokopi.id"
+                      email: "kasir@pos.com"
                       role: "cashier"
                       createdAt: "2026-02-01T07:00:00.000Z"
                       updatedAt: "2026-10-25T06:45:00.000Z"
@@ -1028,7 +1028,7 @@ paths:
                 summary: Melanjutkan sesi yang sudah ada
                 value:
                   message: "Berapa total omzet minggu ini dan produk apa yang paling laris?"
-                  session_id: "sess-9f8e7d6c5b4a"
+                  session_id: "SESSION-DEMO-001"
               newSession:
                 summary: Memulai sesi baru
                 value:
@@ -1045,7 +1045,7 @@ paths:
                   summary: Balasan dengan eksekusi function call
                   value:
                     reply: "Total omzet minggu ini Rp18.750.000 dari 342 transaksi. Produk terlaris adalah Kopi Susu Gula Aren dengan 420 terjual."
-                    session_id: "sess-9f8e7d6c5b4a"
+                    session_id: "SESSION-DEMO-001"
                     function_call_executed:
                       name: "get_best_selling_products"
                       arguments:
@@ -1093,7 +1093,7 @@ paths:
                 success:
                   summary: Riwayat percakapan
                   value:
-                    session_id: "sess-9f8e7d6c5b4a"
+                    session_id: "SESSION-DEMO-001"
                     messages:
                       - _id: "66f0b1c2d3e4f5a6b7c8d9e0"
                         sender: "user"
@@ -1247,7 +1247,7 @@ components:
       description: ID sesi percakapan AI Agent.
       schema:
         type: string
-        example: "sess-9f8e7d6c5b4a"
+        example: "SESSION-DEMO-001"
     ProductIdPathParam:
       name: id
       in: path
@@ -1333,7 +1333,7 @@ components:
         email:
           type: string
           format: email
-          example: "owner@tokokopi.id"
+          example: "admin@pos.com"
         role:
           type: string
           enum:
@@ -1572,7 +1572,7 @@ components:
           example: "66f0b1c2d3e4f5a6b7c8d9f0"
         session_id:
           type: string
-          example: "sess-9f8e7d6c5b4a"
+          example: "SESSION-DEMO-001"
         user_id:
           type: string
           nullable: true
@@ -1601,12 +1601,12 @@ components:
           type: string
           format: email
           description: Email pengguna yang terdaftar pada koleksi `users`, baik owner maupun cashier.
-          example: "owner@tokokopi.id"
+          example: "admin@pos.com"
         password:
           type: string
           format: password
           description: Password pengguna sebelum di-hash.
-          example: "rahasia123"
+          example: "password123"
 
     LoginResponse:
       type: object
@@ -2276,7 +2276,7 @@ components:
           type: string
           nullable: true
           description: ID sesi percakapan. Kosongkan untuk membuat sesi baru.
-          example: "sess-9f8e7d6c5b4a"
+          example: "SESSION-DEMO-001"
 
     FunctionCallExecuted:
       type: object
@@ -2316,7 +2316,7 @@ components:
           example: "Total omzet minggu ini Rp18.750.000 dari 342 transaksi. Produk terlaris adalah Kopi Susu Gula Aren dengan 420 terjual."
         session_id:
           type: string
-          example: "sess-9f8e7d6c5b4a"
+          example: "SESSION-DEMO-001"
         function_call_executed:
           $ref: "#/components/schemas/FunctionCallExecuted"
 
@@ -2328,7 +2328,7 @@ components:
       properties:
         session_id:
           type: string
-          example: "sess-9f8e7d6c5b4a"
+          example: "SESSION-DEMO-001"
         messages:
           type: array
           items:
